@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard Admin | AristaRideAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-title">Panel Administrativo</div>
+        <div class="brand-sub">AristaRideAI</div>
+      </div>
+      <div class="header-actions">
+        <div id="adminBadge" class="badge">Administrador</div>
+        <button id="logoutButton" class="ghost-button" type="button">Cerrar sesion</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="grid">
+        <article class="card">
+          <h3>Usuarios registrados</h3>
+          <p>Resumen general de cuentas activas</p>
+        </article>
+        <article class="card">
+          <h3>Conductores activos</h3>
+          <p>Disponibles para aceptar viajes</p>
+        </article>
+        <article class="card">
+          <h3>Viajes hoy</h3>
+          <p>Solicitudes registradas en el dia</p>
+        </article>
+        <article class="card">
+          <h3>Alertas de red</h3>
+          <p>Eventos criticos y monitoreo</p>
+        </article>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Acciones rapidas</h2>
+        <div class="list">
+          <div class="list-item">
+            <strong>Gestion de usuarios</strong>
+            <span>Revisar roles y accesos</span>
+          </div>
+          <div class="list-item">
+            <strong>Control de conductores</strong>
+            <span>Habilitar o suspender</span>
+          </div>
+          <div class="list-item">
+            <strong>Monitoreo de red</strong>
+            <span>Panel de metricas</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">Dashboard basico de administracion</footer>
+  </div>
+
+  <script>
+    const badge = document.getElementById("adminBadge");
+    const logoutButton = document.getElementById("logoutButton");
+
+    function redirectToLogin() {
+      window.location.href = "/auth/login-admin.html";
+    }
+
+    function getToken() {
+      return localStorage.getItem("authToken");
+    }
+
+    async function validarSesion() {
+      const token = getToken();
+      if (!token) {
+        redirectToLogin();
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/me", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          redirectToLogin();
+          return;
+        }
+
+        const data = await response.json();
+        if (!data || !data.usuario || data.usuario.rol !== "ADMIN") {
+          redirectToLogin();
+          return;
+        }
+
+        badge.textContent = data.usuario.nombre || "Administrador";
+      } catch (error) {
+        redirectToLogin();
+      }
+    }
+
+    logoutButton.addEventListener("click", async () => {
+      const token = getToken();
+      if (token) {
+        try {
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+        } catch (error) {
+          // Ignore network errors for logout
+        }
+      }
+      localStorage.removeItem("authToken");
+      redirectToLogin();
+    });
+
+    validarSesion();
+  </script>
+</body>
+</html>

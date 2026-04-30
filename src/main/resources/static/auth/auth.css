@@ -211,6 +211,17 @@ input:focus {
   border-color: var(--accent);
 }
 
+.form-message {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #b42318;
+  display: none;
+}
+
+.form-message.visible {
+  display: block;
+}
+
 .footer {
   position: relative;
   z-index: 1;
@@ -230,6 +241,12 @@ input:focus {
   --accent: #d96c1b;
   --accent-2: #2b8a6e;
   --focus: rgba(217, 108, 27, 0.25);
+}
+
+.role-admin {
+  --accent: #7d3c98;
+  --accent-2: #3c5aa6;
+  --focus: rgba(61, 90, 166, 0.25);
 }
 
 @keyframes rise {

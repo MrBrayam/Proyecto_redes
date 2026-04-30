@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login Admin | AristaRideAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body class="role-admin">
+  <div class="page">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-title">AristaRideAI</div>
+        <div class="brand-sub">Ingreso de administracion</div>
+      </div>
+      <nav class="role-switch">
+        <a href="login-cliente.html">Cliente</a>
+        <a href="login-conductor.html">Conductor</a>
+        <a class="active" href="login-admin.html">Admin</a>
+      </nav>
+    </header>
+
+    <main class="main">
+      <section class="login-card">
+        <h1 class="login-title">Acceso administrativo</h1>
+        <p class="login-subtitle">Ingresa con tus credenciales de administrador.</p>
+
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label for="email">Correo</label>
+            <input id="email" name="email" type="email" placeholder="admin@correo.com" required />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contrasena</label>
+            <input id="password" name="password" type="password" placeholder="Tu clave" required />
+          </div>
+
+          <div class="actions">
+            <label>
+              <input type="checkbox" name="recordar" />
+              Mantener sesion
+            </label>
+            <span>Soporte interno</span>
+          </div>
+
+          <button class="primary-button" type="submit">Ingresar</button>
+          <div id="formMessage" class="form-message"></div>
+        </form>
+
+        <div class="helper">
+          Acceso restringido para administradores autorizados
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">Panel administrativo AristaRideAI</footer>
+  </div>
+
+  <script>
+    const form = document.getElementById("adminLoginForm");
+    const message = document.getElementById("formMessage");
+
+    function setMessage(text) {
+      message.textContent = text;
+      message.classList.add("visible");
+    }
+
+    function clearMessage() {
+      message.textContent = "";
+      message.classList.remove("visible");
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearMessage();
+
+      const email = form.email.value.trim();
+      const password = form.password.value.trim();
+
+      if (!email || !password) {
+        setMessage("Completa email y contrasena");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+          setMessage("Credenciales invalidas");
+          return;
+        }
+
+        const data = await response.json();
+        if (!data || !data.usuario || data.usuario.rol !== "ADMIN") {
+          setMessage("No tienes permisos de administrador");
+          return;
+        }
+
+        localStorage.setItem("authToken", data.token);
+        window.location.href = "/admin/dashboard.html";
+      } catch (error) {
+        setMessage("No se pudo iniciar sesion");
+      }
+    });
+  </script>
+</body>
+</html>
