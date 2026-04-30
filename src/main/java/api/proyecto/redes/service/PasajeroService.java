@@ -1,7 +1,9 @@
 package api.proyecto.redes.service;
 
+import api.proyecto.redes.model.Pasajero;
 import api.proyecto.redes.model.RolUsuario;
 import api.proyecto.redes.model.Usuario;
+import api.proyecto.redes.repository.PasajeroRepository;
 import api.proyecto.redes.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -12,22 +14,23 @@ import java.util.List;
 public class PasajeroService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PasajeroRepository pasajeroRepository;
 
-    public PasajeroService(UsuarioRepository usuarioRepository) {
+    public PasajeroService(UsuarioRepository usuarioRepository, PasajeroRepository pasajeroRepository) {
         this.usuarioRepository = usuarioRepository;
+        this.pasajeroRepository = pasajeroRepository;
     }
 
     public List<Usuario> listar() {
-        return usuarioRepository.findByRol(RolUsuario.PASAJERO);
+        return pasajeroRepository.findAll().stream()
+            .map(Pasajero::getUsuario)
+            .toList();
     }
 
     public Usuario obtenerPorId(Long id) {
-        Usuario usuario = usuarioRepository.findById(id)
+        Pasajero pasajero = pasajeroRepository.findByUsuario_IdUsuario(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pasajero no encontrado"));
-        if (usuario.getRol() != RolUsuario.PASAJERO) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pasajero no encontrado");
-        }
-        return usuario;
+        return pasajero.getUsuario();
     }
 
     public Usuario crear(Usuario usuario) {
@@ -36,11 +39,19 @@ public class PasajeroService {
         if (usuarioRepository.findByEmail(usuario.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email ya registrado");
         }
-        return usuarioRepository.save(usuario);
+        Usuario creado = usuarioRepository.save(usuario);
+
+        Pasajero pasajero = new Pasajero();
+        pasajero.setUsuario(creado);
+        pasajeroRepository.save(pasajero);
+
+        return creado;
     }
 
     public Usuario actualizar(Long id, Usuario datos) {
-        Usuario existente = obtenerPorId(id);
+        Pasajero pasajero = pasajeroRepository.findByUsuario_IdUsuario(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pasajero no encontrado"));
+        Usuario existente = pasajero.getUsuario();
 
         if (datos.getNombre() != null && !datos.getNombre().isBlank()) {
             existente.setNombre(datos.getNombre());
@@ -60,8 +71,10 @@ public class PasajeroService {
     }
 
     public void eliminar(Long id) {
-        Usuario existente = obtenerPorId(id);
-        usuarioRepository.delete(existente);
+        Pasajero pasajero = pasajeroRepository.findByUsuario_IdUsuario(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pasajero no encontrado"));
+        pasajeroRepository.delete(pasajero);
+        usuarioRepository.delete(pasajero.getUsuario());
     }
 
     private void validarBasico(Usuario usuario) {

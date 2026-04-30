@@ -4,8 +4,10 @@ import api.proyecto.redes.dto.AuthLoginRequest;
 import api.proyecto.redes.dto.AuthRegisterRequest;
 import api.proyecto.redes.dto.AuthResponse;
 import api.proyecto.redes.dto.UsuarioResponse;
+import api.proyecto.redes.model.Pasajero;
 import api.proyecto.redes.model.RolUsuario;
 import api.proyecto.redes.model.Usuario;
+import api.proyecto.redes.repository.PasajeroRepository;
 import api.proyecto.redes.repository.UsuarioRepository;
 import api.proyecto.redes.util.PasswordHasher;
 import org.springframework.http.HttpStatus;
@@ -23,10 +25,12 @@ public class AuthService {
     private static final Duration TOKEN_TTL = Duration.ofHours(8);
 
     private final UsuarioRepository usuarioRepository;
+    private final PasajeroRepository pasajeroRepository;
     private final Map<String, AuthSession> sesiones = new ConcurrentHashMap<>();
 
-    public AuthService(UsuarioRepository usuarioRepository) {
+    public AuthService(UsuarioRepository usuarioRepository, PasajeroRepository pasajeroRepository) {
         this.usuarioRepository = usuarioRepository;
+        this.pasajeroRepository = pasajeroRepository;
     }
 
     public UsuarioResponse registrar(AuthRegisterRequest request) {
@@ -43,6 +47,7 @@ public class AuthService {
         usuario.setRol(RolUsuario.PASAJERO);
 
         Usuario creado = usuarioRepository.save(usuario);
+        crearPerfilPasajero(creado);
         return toUsuarioResponse(creado);
     }
 
@@ -131,5 +136,17 @@ public class AuthService {
             usuario.getRol(),
             usuario.getCreadoEn()
         );
+    }
+
+    private void crearPerfilPasajero(Usuario usuario) {
+        if (usuario.getRol() != RolUsuario.PASAJERO) {
+            return;
+        }
+        if (pasajeroRepository.existsByUsuario_IdUsuario(usuario.getIdUsuario())) {
+            return;
+        }
+        Pasajero pasajero = new Pasajero();
+        pasajero.setUsuario(usuario);
+        pasajeroRepository.save(pasajero);
     }
 }

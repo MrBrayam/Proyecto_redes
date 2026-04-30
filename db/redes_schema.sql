@@ -9,7 +9,7 @@ USE redes;
 
 -- 3) Tablas principales
 
--- Usuarios (pasajeros y administradores)
+-- Usuarios (base para autenticacion)
 CREATE TABLE IF NOT EXISTS usuarios (
   id_usuario BIGINT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
@@ -19,10 +19,28 @@ CREATE TABLE IF NOT EXISTS usuarios (
   creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Administradores (perfil)
+CREATE TABLE IF NOT EXISTS administradores (
+  id_admin BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT NOT NULL UNIQUE,
+  area VARCHAR(100),
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_admin_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);
+
+-- Pasajeros (perfil)
+CREATE TABLE IF NOT EXISTS pasajeros (
+  id_pasajero BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT NOT NULL UNIQUE,
+  telefono VARCHAR(30),
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pasajero_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);
+
 -- Conductores (info específica de conductores)
 CREATE TABLE IF NOT EXISTS conductores (
   id_conductor BIGINT AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT NOT NULL,
+  usuario_id BIGINT NOT NULL UNIQUE,
   licencia VARCHAR(100) NOT NULL,
   vehiculo VARCHAR(150),
   calificacion_promedio DECIMAL(3,2) DEFAULT 0,
@@ -66,7 +84,18 @@ CREATE INDEX IF NOT EXISTS idx_conductor_disponible ON conductores(disponible);
 
 -- 4) Datos de ejemplo (útiles para pruebas locales)
 INSERT INTO usuarios (nombre, email, password, rol) VALUES
-  ('Administrador', 'admin@local.test', 'admin-password-hash', 'ADMIN');
+  ('Administrador', 'admin@local.test', 'admin-password-hash', 'ADMIN'),
+  ('Pasajero Uno', 'pasajero1@local.test', 'pasajero-password-hash', 'PASAJERO'),
+  ('Conductor Uno', 'conductor1@local.test', 'conductor-password-hash', 'CONDUCTOR');
+
+INSERT INTO administradores (usuario_id, area) VALUES
+  (1, 'Operaciones');
+
+INSERT INTO pasajeros (usuario_id, telefono) VALUES
+  (2, '900000000');
+
+INSERT INTO conductores (usuario_id, licencia, vehiculo, calificacion_promedio, disponible) VALUES
+  (3, 'ABC-12345', 'Toyota Prius - PLACA123', 4.8, TRUE);
 
 -- Ejemplo de calificación (se añadirá una vez finalizado el viaje)
 -- INSERT INTO calificaciones (viaje_id, calificador_id, puntuacion, comentario) VALUES (1, 2, 5, 'Excelente servicio');
