@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel Pasajero | AristaRideAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="pasajero.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-title">Panel Pasajero</div>
+        <div class="brand-sub">AristaRideAI</div>
+      </div>
+      <div class="header-actions">
+        <button id="logoutButton" class="ghost-button" type="button">Cerrar sesion</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="panel">
+        <h2>Solicitar viaje</h2>
+        <div>
+          <label for="origenLat">Origen lat</label>
+          <input id="origenLat" type="text" readonly />
+        </div>
+        <div>
+          <label for="origenLng">Origen lng</label>
+          <input id="origenLng" type="text" readonly />
+        </div>
+        <div>
+          <label for="destino">Destino</label>
+          <input id="destino" type="text" placeholder="Ingresa un destino" />
+        </div>
+        <button class="primary-button" type="button" onclick="solicitarViaje()">Solicitar</button>
+        <div class="status">Estado: <span id="rideStatus">Sin solicitud</span></div>
+        <div class="status">Socket: <span id="wsStatus">Desconectado</span></div>
+      </section>
+
+      <section class="map-card">
+        <div id="map"></div>
+        <div class="overlay">Haz click en el mapa para mover el origen</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const logoutButton = document.getElementById("logoutButton");
+    logoutButton.addEventListener("click", async () => {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        try {
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+        } catch (error) {
+          // ignore
+        }
+      }
+      localStorage.removeItem("authToken");
+      window.location.href = "/auth/login-cliente.html";
+    });
+  </script>
+  <script src="pasajero.js"></script>
+  <script>
+    async function loadMapsScript() {
+      try {
+        const response = await fetch("/api/config/maps-key");
+        if (!response.ok) {
+          document.querySelector(".overlay").textContent = "Configura la API key en el servidor";
+          return;
+        }
+
+        const data = await response.json();
+        if (!data || !data.key) {
+          document.querySelector(".overlay").textContent = "API key no disponible";
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      } catch (error) {
+        document.querySelector(".overlay").textContent = "No se pudo cargar Google Maps";
+      }
+    }
+
+    loadMapsScript();
+  </script>
+</body>
+</html>

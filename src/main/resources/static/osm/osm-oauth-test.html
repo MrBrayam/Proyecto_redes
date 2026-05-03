@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OSM OAuth Test | AristaRideAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1d2a33;
+      --muted: #6a7780;
+      --card: #ffffff;
+      --stroke: #e2e6e9;
+      --shadow: 0 18px 40px rgba(29, 42, 51, 0.12);
+      --accent: #0a7f6a;
+      --accent-2: #1c3b70;
+      --bg-1: #eef7f4;
+      --bg-2: #f2f5fb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 28px 20px 40px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-family: "DM Serif Display", serif;
+      font-size: 22px;
+    }
+
+    .brand-sub {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 12px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--stroke);
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      color: #ffffff;
+    }
+
+    .ghost {
+      background: transparent;
+      border: 1px solid var(--accent-2);
+      color: var(--accent-2);
+    }
+
+    .scope-list {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      font-size: 13px;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-title">OSM OAuth Test</div>
+        <div class="brand-sub">Pruebas de autenticacion para OpenStreetMap API</div>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Configuracion</h2>
+        <div class="row">
+          <label for="env">Entorno</label>
+          <select id="env">
+            <option value="live">Live (openstreetmap.org)</option>
+            <option value="dev">Dev (master.apis.dev.openstreetmap.org)</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="authBase">Auth base URL</label>
+          <input id="authBase" type="text" value="https://www.openstreetmap.org" />
+        </div>
+        <div class="row">
+          <label for="apiBase">API base URL</label>
+          <input id="apiBase" type="text" value="https://api.openstreetmap.org" />
+        </div>
+        <div class="row">
+          <label for="clientId">Client ID</label>
+          <input id="clientId" type="text" placeholder="Tu client_id" />
+        </div>
+        <div class="row">
+          <label for="redirectUri">Redirect URI</label>
+          <input id="redirectUri" type="text" placeholder="http://localhost:8080/osm/osm-oauth-test.html" />
+        </div>
+        <div class="row">
+          <label for="state">State</label>
+          <input id="state" type="text" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Scopes</h2>
+        <div class="scope-list" id="scopeList">
+          <label><input type="checkbox" value="read_prefs" checked /> read_prefs</label>
+          <label><input type="checkbox" value="write_prefs" /> write_prefs</label>
+          <label><input type="checkbox" value="write_api" /> write_api</label>
+          <label><input type="checkbox" value="read_gpx" /> read_gpx</label>
+          <label><input type="checkbox" value="write_gpx" /> write_gpx</label>
+          <label><input type="checkbox" value="write_notes" /> write_notes</label>
+          <label><input type="checkbox" value="write_diary" /> write_diary</label>
+          <label><input type="checkbox" value="write_redactions" /> write_redactions</label>
+          <label><input type="checkbox" value="write_blocks" /> write_blocks</label>
+          <label><input type="checkbox" value="consume_messages" /> consume_messages</label>
+          <label><input type="checkbox" value="send_messages" /> send_messages</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>PKCE</h2>
+        <div class="row">
+          <label for="codeVerifier">Code verifier</label>
+          <input id="codeVerifier" type="text" />
+        </div>
+        <div class="row">
+          <label for="codeChallenge">Code challenge (S256)</label>
+          <input id="codeChallenge" type="text" />
+        </div>
+        <div class="actions">
+          <button class="button" id="generatePkce">Generar PKCE</button>
+          <button class="button ghost" id="buildUrl">Construir URL</button>
+          <button class="button" id="startAuth">Iniciar OAuth</button>
+        </div>
+        <div class="row">
+          <label for="authUrl">Auth URL</label>
+          <textarea id="authUrl" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Callback y Token</h2>
+        <div class="row">
+          <label for="authCode">Authorization code</label>
+          <input id="authCode" type="text" />
+        </div>
+        <div class="row">
+          <label for="accessToken">Access token</label>
+          <input id="accessToken" type="text" placeholder="Pega aqui tu token" />
+        </div>
+        <div class="actions">
+          <button class="button ghost" id="readMe">Probar /api/0.6/user/details</button>
+        </div>
+        <div class="status" id="apiStatus">Listo</div>
+      </div>
+    </section>
+
+    <footer class="footer">Esta pagina no intercambia tokens por seguridad. Usa tu backend para el intercambio.</footer>
+  </div>
+
+  <script>
+    const envSelect = document.getElementById("env");
+    const authBase = document.getElementById("authBase");
+    const apiBase = document.getElementById("apiBase");
+    const clientId = document.getElementById("clientId");
+    const redirectUri = document.getElementById("redirectUri");
+    const stateInput = document.getElementById("state");
+    const codeVerifierInput = document.getElementById("codeVerifier");
+    const codeChallengeInput = document.getElementById("codeChallenge");
+    const authUrl = document.getElementById("authUrl");
+    const authCode = document.getElementById("authCode");
+    const accessToken = document.getElementById("accessToken");
+    const apiStatus = document.getElementById("apiStatus");
+
+    function randomString() {
+      return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    }
+
+    function base64UrlEncode(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = "";
+      bytes.forEach((b) => {
+        binary += String.fromCharCode(b);
+      });
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    async function sha256(value) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(value);
+      const hash = await crypto.subtle.digest("SHA-256", data);
+      return base64UrlEncode(hash);
+    }
+
+    function selectedScopes() {
+      return Array.from(document.querySelectorAll("#scopeList input:checked"))
+        .map((input) => input.value)
+        .join(" ");
+    }
+
+    function setEnv() {
+      if (envSelect.value === "dev") {
+        authBase.value = "https://master.apis.dev.openstreetmap.org";
+        apiBase.value = "https://master.apis.dev.openstreetmap.org";
+      } else {
+        authBase.value = "https://www.openstreetmap.org";
+        apiBase.value = "https://api.openstreetmap.org";
+      }
+    }
+
+    function buildAuthUrl() {
+      const scopes = selectedScopes();
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: clientId.value.trim(),
+        redirect_uri: redirectUri.value.trim(),
+        scope: scopes,
+        state: stateInput.value.trim()
+      });
+
+      if (codeChallengeInput.value.trim()) {
+        params.set("code_challenge", codeChallengeInput.value.trim());
+        params.set("code_challenge_method", "S256");
+      }
+
+      authUrl.value = `${authBase.value}/oauth2/authorize?${params.toString()}`;
+    }
+
+    envSelect.addEventListener("change", () => {
+      setEnv();
+      buildAuthUrl();
+    });
+
+    document.getElementById("generatePkce").addEventListener("click", async () => {
+      const verifier = randomString() + randomString();
+      codeVerifierInput.value = verifier;
+      codeChallengeInput.value = await sha256(verifier);
+      stateInput.value = randomString();
+      buildAuthUrl();
+      localStorage.setItem("osm_pkce_verifier", verifier);
+      localStorage.setItem("osm_state", stateInput.value);
+    });
+
+    document.getElementById("buildUrl").addEventListener("click", () => {
+      buildAuthUrl();
+    });
+
+    document.getElementById("startAuth").addEventListener("click", () => {
+      buildAuthUrl();
+      if (!authUrl.value) {
+        apiStatus.textContent = "Completa los datos antes de iniciar";
+        return;
+      }
+      window.open(authUrl.value, "_blank");
+    });
+
+    document.getElementById("readMe").addEventListener("click", async () => {
+      apiStatus.textContent = "Consultando API...";
+      const token = accessToken.value.trim();
+      if (!token) {
+        apiStatus.textContent = "Ingresa un access token";
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiBase.value}/api/0.6/user/details`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const text = await response.text();
+        apiStatus.textContent = `Status: ${response.status}\n${text}`;
+      } catch (error) {
+        apiStatus.textContent = "Error consultando la API";
+      }
+    });
+
+    function loadFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("code")) {
+        authCode.value = params.get("code");
+      }
+      if (!stateInput.value) {
+        stateInput.value = localStorage.getItem("osm_state") || randomString();
+      }
+      if (!codeVerifierInput.value) {
+        codeVerifierInput.value = localStorage.getItem("osm_pkce_verifier") || "";
+      }
+    }
+
+    setEnv();
+    loadFromUrl();
+    buildAuthUrl();
+  </script>
+</body>
+</html>
