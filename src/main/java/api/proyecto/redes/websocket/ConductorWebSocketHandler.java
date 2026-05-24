@@ -48,6 +48,7 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
             case "ride-accept" -> handleRideAccept(session, payload);
             case "ride-reject" -> handleRideReject(session, payload);
             case "driver-location" -> handleDriverLocation(session, payload);
+            case "driver-available-location" -> handleAvailableLocation(session, payload);
             default -> {
             }
         }
@@ -125,6 +126,22 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
             "lng", lng,
             "viajeId", viajeId
         ));
+
+        rideRealtimeService.updateConductorLocation(viaje.getConductor().getIdConductor(), lat.doubleValue(), lng.doubleValue());
+    }
+
+    private void handleAvailableLocation(WebSocketSession session, JsonNode payload) throws Exception {
+        AuthResponse auth = validarConductor(payload, session);
+        if (auth == null) {
+            return;
+        }
+        BigDecimal lat = toDecimal(payload.path("lat").asText(null));
+        BigDecimal lng = toDecimal(payload.path("lng").asText(null));
+        if (lat == null || lng == null) {
+            return;
+        }
+        Conductor conductor = conductorService.obtenerPorUsuarioId(auth.usuario().idUsuario());
+        rideRealtimeService.updateConductorLocation(conductor.getIdConductor(), lat.doubleValue(), lng.doubleValue());
     }
 
     private AuthResponse validarConductor(JsonNode payload, WebSocketSession session) throws Exception {

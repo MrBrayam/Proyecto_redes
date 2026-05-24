@@ -7,6 +7,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.time.Instant;
 
 @Service
 public class RideRealtimeService {
@@ -14,6 +15,7 @@ public class RideRealtimeService {
     private final ObjectMapper objectMapper;
     private final Map<Long, WebSocketSession> pasajeroSessions = new ConcurrentHashMap<>();
     private final Map<Long, WebSocketSession> conductorSessions = new ConcurrentHashMap<>();
+    private final Map<Long, ConductorLocationSnapshot> conductorLocations = new ConcurrentHashMap<>();
 
     public RideRealtimeService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -29,6 +31,16 @@ public class RideRealtimeService {
         if (conductorId != null) {
             conductorSessions.put(conductorId, session);
         }
+    }
+
+    public void updateConductorLocation(Long conductorId, double lat, double lng) {
+        if (conductorId != null) {
+            conductorLocations.put(conductorId, new ConductorLocationSnapshot(lat, lng, Instant.now()));
+        }
+    }
+
+    public Map<Long, ConductorLocationSnapshot> getConductorLocations() {
+        return Map.copyOf(conductorLocations);
     }
 
     public void removeSession(WebSocketSession session) {

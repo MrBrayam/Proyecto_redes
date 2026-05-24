@@ -21,6 +21,10 @@ public class ViajeService {
     }
 
     public Viaje crearSolicitud(Usuario pasajero, ViajeRequest request) {
+        return crearSolicitud(pasajero, request, null);
+    }
+
+    public Viaje crearSolicitud(Usuario pasajero, ViajeRequest request, Conductor conductorAsignado) {
         if (pasajero == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pasajero requerido");
         }
@@ -35,6 +39,9 @@ public class ViajeService {
         viaje.setOrigenLng(request.origenLng());
         viaje.setDestinoLat(request.destinoLat());
         viaje.setDestinoLng(request.destinoLng());
+        if (conductorAsignado != null) {
+            viaje.setConductor(conductorAsignado);
+        }
         viaje.setEstado(EstadoViaje.SOLICITADO);
         return viajeRepository.save(viaje);
     }

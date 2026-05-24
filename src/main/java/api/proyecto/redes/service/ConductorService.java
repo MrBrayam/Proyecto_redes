@@ -28,6 +28,10 @@ public class ConductorService {
         return conductorRepository.findByDisponible(disponible);
     }
 
+    public List<Conductor> listarDisponibles() {
+        return conductorRepository.findByDisponible(true);
+    }
+
     public Conductor obtenerPorId(Long id) {
         return conductorRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conductor no encontrado"));

@@ -120,6 +120,54 @@ body {
   color: var(--muted);
 }
 
+.drivers {
+  border-top: 1px solid var(--stroke);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.drivers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.pill {
+  background: rgba(43, 138, 110, 0.15);
+  color: #2b8a6e;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.drivers-list {
+  display: grid;
+  gap: 10px;
+}
+
+.driver-card {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+.driver-card button {
+  border: 1px solid var(--stroke);
+  background: #ffffff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .map-card {
   background: var(--card);
   border: 1px solid var(--stroke);
@@ -145,6 +193,47 @@ body {
   padding: 10px 12px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(29, 42, 51, 0.5);
+  z-index: 20;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  width: min(360px, 92vw);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 12px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-body {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.modal-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 @media (max-width: 900px) {

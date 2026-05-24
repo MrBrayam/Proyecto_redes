@@ -4,26 +4,39 @@ let driverMarker;
 let ws;
 let activeRideId = null;
 const rides = new Map();
+const FIXED_COORDS = { lat: -6.485623, lng: -76.371148 };
 
 function initMap() {
   const defaultPos = { lat: -6.501, lng: -76.365 };
   map = new google.maps.Map(document.getElementById("map"), {
     center: defaultPos,
     zoom: 14,
-    mapTypeControl: false
+    mapTypeControl: false,
+    mapId: "7f05a409dd0b6a5abd5c170e"
   });
+
+  map.setCenter(FIXED_COORDS);
+  if (!driverMarker) {
+    driverMarker = new google.maps.marker.AdvancedMarkerElement({
+      map,
+      position: FIXED_COORDS,
+      title: "Conductor"
+    });
+  } else {
+    driverMarker.position = FIXED_COORDS;
+  }
 }
 
 function setPassengerMarker(lat, lng) {
   const position = { lat: Number(lat), lng: Number(lng) };
   if (!passengerMarker) {
-    passengerMarker = new google.maps.Marker({
+    passengerMarker = new google.maps.marker.AdvancedMarkerElement({
       map,
       position,
       title: "Pasajero"
     });
   } else {
-    passengerMarker.setPosition(position);
+    passengerMarker.position = position;
   }
   map.setCenter(position);
 }
@@ -172,7 +185,43 @@ async function cargarPerfil() {
 
 function sendDriverLocation() {
   const token = localStorage.getItem("authToken");
-  if (!token || !activeRideId) {
+  if (!token) {
+    return;
+  }
+
+  if (FIXED_COORDS) {
+    const lat = FIXED_COORDS.lat.toFixed(6);
+    const lng = FIXED_COORDS.lng.toFixed(6);
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      if (activeRideId) {
+        ws.send(JSON.stringify({
+          type: "driver-location",
+          token,
+          viajeId: activeRideId,
+          lat,
+          lng
+        }));
+      }
+
+      ws.send(JSON.stringify({
+        type: "driver-available-location",
+        token,
+        lat,
+        lng
+      }));
+    }
+
+    const coords = { lat: Number(lat), lng: Number(lng) };
+    if (!driverMarker) {
+      driverMarker = new google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: coords,
+        title: "Conductor"
+      });
+    } else {
+      driverMarker.position = coords;
+    }
     return;
   }
 
@@ -183,12 +232,20 @@ function sendDriverLocation() {
   navigator.geolocation.getCurrentPosition((position) => {
     const lat = position.coords.latitude.toFixed(6);
     const lng = position.coords.longitude.toFixed(6);
-
     if (ws && ws.readyState === WebSocket.OPEN) {
+      if (activeRideId) {
+        ws.send(JSON.stringify({
+          type: "driver-location",
+          token,
+          viajeId: activeRideId,
+          lat,
+          lng
+        }));
+      }
+
       ws.send(JSON.stringify({
-        type: "driver-location",
+        type: "driver-available-location",
         token,
-        viajeId: activeRideId,
         lat,
         lng
       }));
@@ -196,13 +253,13 @@ function sendDriverLocation() {
 
     const coords = { lat: Number(lat), lng: Number(lng) };
     if (!driverMarker) {
-      driverMarker = new google.maps.Marker({
+      driverMarker = new google.maps.marker.AdvancedMarkerElement({
         map,
         position: coords,
         title: "Conductor"
       });
     } else {
-      driverMarker.setPosition(coords);
+      driverMarker.position = coords;
     }
   });
 }
@@ -231,4 +288,5 @@ document.getElementById("sendLocationButton").addEventListener("click", sendDriv
 setupLogout();
 connectWebSocket();
 cargarPerfil();
+setInterval(sendDriverLocation, 15000);
 window.initMap = initMap;

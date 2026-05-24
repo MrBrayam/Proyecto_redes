@@ -7,6 +7,7 @@ public record ViajeRequest(
     BigDecimal origenLng,
     BigDecimal destinoLat,
     BigDecimal destinoLng,
-    String destinoTexto
+    String destinoTexto,
+    Long conductorId
 ) {
 }

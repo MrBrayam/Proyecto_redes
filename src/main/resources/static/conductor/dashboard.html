@@ -37,7 +37,7 @@
         <article class="card actions">
           <h3>Acciones rapidas</h3>
           <button id="sendLocationButton" class="primary-button" type="button">Enviar ubicacion actual</button>
-          <div class="hint">Selecciona una solicitud antes de enviar ubicacion.</div>
+          <div class="hint">Comparte tu ubicacion para aparecer en conductores cercanos.</div>
         </article>
       </section>
 
@@ -73,7 +73,7 @@
         }
 
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async&libraries=marker`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);

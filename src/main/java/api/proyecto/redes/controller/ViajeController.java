@@ -11,6 +11,7 @@ import api.proyecto.redes.model.Viaje;
 import api.proyecto.redes.repository.UsuarioRepository;
 import api.proyecto.redes.service.AuthService;
 import api.proyecto.redes.service.ConductorService;
+import api.proyecto.redes.service.RideRealtimeService;
 import api.proyecto.redes.service.ViajeService;
 import api.proyecto.redes.util.AuthTokenExtractor;
 import org.springframework.http.HttpHeaders;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/viajes")
@@ -33,15 +35,18 @@ public class ViajeController {
     private final AuthService authService;
     private final UsuarioRepository usuarioRepository;
     private final ConductorService conductorService;
+    private final RideRealtimeService rideRealtimeService;
 
     public ViajeController(ViajeService viajeService,
                            AuthService authService,
                            UsuarioRepository usuarioRepository,
-                           ConductorService conductorService) {
+                           ConductorService conductorService,
+                           RideRealtimeService rideRealtimeService) {
         this.viajeService = viajeService;
         this.authService = authService;
         this.usuarioRepository = usuarioRepository;
         this.conductorService = conductorService;
+        this.rideRealtimeService = rideRealtimeService;
     }
 
     @PostMapping
@@ -51,7 +56,36 @@ public class ViajeController {
         AuthResponse session = validarRol(authorization, tokenHeader, RolUsuario.PASAJERO);
         Usuario pasajero = usuarioRepository.findById(session.usuario().idUsuario())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pasajero no encontrado"));
-        Viaje viaje = viajeService.crearSolicitud(pasajero, request);
+        Conductor conductor = null;
+        if (request.conductorId() != null) {
+            conductor = conductorService.obtenerPorId(request.conductorId());
+        }
+        Viaje viaje = viajeService.crearSolicitud(pasajero, request, conductor);
+        if (conductor != null) {
+            rideRealtimeService.enviarAConductor(conductor.getIdConductor(), Map.of(
+                "type", "ride-request",
+                "viajeId", viaje.getIdViaje(),
+                "pasajeroId", pasajero.getIdUsuario(),
+                "pasajeroNombre", pasajero.getNombre(),
+                "origenLat", viaje.getOrigenLat(),
+                "origenLng", viaje.getOrigenLng(),
+                "destinoLat", viaje.getDestinoLat(),
+                "destinoLng", viaje.getDestinoLng(),
+                "destino", request.destinoTexto()
+            ));
+        } else {
+            rideRealtimeService.broadcastConductores(Map.of(
+                "type", "ride-request",
+                "viajeId", viaje.getIdViaje(),
+                "pasajeroId", pasajero.getIdUsuario(),
+                "pasajeroNombre", pasajero.getNombre(),
+                "origenLat", viaje.getOrigenLat(),
+                "origenLng", viaje.getOrigenLng(),
+                "destinoLat", viaje.getDestinoLat(),
+                "destinoLng", viaje.getDestinoLng(),
+                "destino", request.destinoTexto()
+            ));
+        }
         return toResponse(viaje);
     }
 

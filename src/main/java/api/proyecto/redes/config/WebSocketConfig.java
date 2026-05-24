@@ -41,7 +41,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new PasajeroWebSocketHandler(
-            objectMapper, authService, usuarioRepository, viajeService, rideRealtimeService
+            objectMapper, authService, usuarioRepository, viajeService, rideRealtimeService, conductorService
         ), "/ws/pasajero").setAllowedOrigins("*");
 
         registry.addHandler(new ConductorWebSocketHandler(

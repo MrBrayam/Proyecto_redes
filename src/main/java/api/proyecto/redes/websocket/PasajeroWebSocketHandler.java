@@ -2,11 +2,13 @@ package api.proyecto.redes.websocket;
 
 import api.proyecto.redes.dto.AuthResponse;
 import api.proyecto.redes.dto.ViajeRequest;
+import api.proyecto.redes.model.Conductor;
 import api.proyecto.redes.model.RolUsuario;
 import api.proyecto.redes.model.Usuario;
 import api.proyecto.redes.model.Viaje;
 import api.proyecto.redes.repository.UsuarioRepository;
 import api.proyecto.redes.service.AuthService;
+import api.proyecto.redes.service.ConductorService;
 import api.proyecto.redes.service.RideRealtimeService;
 import api.proyecto.redes.service.ViajeService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,17 +27,20 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
     private final UsuarioRepository usuarioRepository;
     private final ViajeService viajeService;
     private final RideRealtimeService rideRealtimeService;
+    private final ConductorService conductorService;
 
     public PasajeroWebSocketHandler(ObjectMapper objectMapper,
                                     AuthService authService,
                                     UsuarioRepository usuarioRepository,
                                     ViajeService viajeService,
-                                    RideRealtimeService rideRealtimeService) {
+                                    RideRealtimeService rideRealtimeService,
+                                    ConductorService conductorService) {
         this.objectMapper = objectMapper;
         this.authService = authService;
         this.usuarioRepository = usuarioRepository;
         this.viajeService = viajeService;
         this.rideRealtimeService = rideRealtimeService;
+        this.conductorService = conductorService;
     }
 
     @Override
@@ -75,6 +80,7 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
         BigDecimal destinoLat = toDecimal(payload.path("destinoLat").asText(null));
         BigDecimal destinoLng = toDecimal(payload.path("destinoLng").asText(null));
         String destinoTexto = payload.path("destino").asText(null);
+        Long conductorId = payload.path("conductorId").isNumber() ? payload.path("conductorId").asLong() : null;
 
         if (origenLat == null || origenLng == null) {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
@@ -87,15 +93,19 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
             destinoLng = origenLng;
         }
 
-        ViajeRequest request = new ViajeRequest(origenLat, origenLng, destinoLat, destinoLng, destinoTexto);
-        Viaje viaje = viajeService.crearSolicitud(pasajero, request);
+        Conductor conductor = null;
+        if (conductorId != null && conductorId > 0) {
+            conductor = conductorService.obtenerPorId(conductorId);
+        }
+        ViajeRequest request = new ViajeRequest(origenLat, origenLng, destinoLat, destinoLng, destinoTexto, conductorId);
+        Viaje viaje = viajeService.crearSolicitud(pasajero, request, conductor);
 
         rideRealtimeService.registerPasajero(pasajero.getIdUsuario(), session);
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
             Map.of("type", "ride-status", "status", "SOLICITADO", "viajeId", viaje.getIdViaje())
         )));
 
-        rideRealtimeService.broadcastConductores(Map.of(
+        Map<String, Object> payloadConductor = Map.of(
             "type", "ride-request",
             "viajeId", viaje.getIdViaje(),
             "pasajeroId", pasajero.getIdUsuario(),
@@ -105,7 +115,13 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
             "destinoLat", viaje.getDestinoLat(),
             "destinoLng", viaje.getDestinoLng(),
             "destino", destinoTexto
-        ));
+        );
+
+        if (conductor != null) {
+            rideRealtimeService.enviarAConductor(conductor.getIdConductor(), payloadConductor);
+        } else {
+            rideRealtimeService.broadcastConductores(payloadConductor);
+        }
     }
 
     private BigDecimal toDecimal(String value) {

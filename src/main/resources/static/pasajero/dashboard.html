@@ -36,6 +36,14 @@
           <label for="destino">Destino</label>
           <input id="destino" type="text" placeholder="Ingresa un destino" />
         </div>
+        <button id="buscarConductores" class="ghost-button" type="button">Ver conductores cercanos</button>
+        <div class="drivers">
+          <div class="drivers-header">
+            <strong>Conductores cercanos</strong>
+            <span id="driversCount" class="pill">0</span>
+          </div>
+          <div id="driversList" class="drivers-list"></div>
+        </div>
         <button class="primary-button" type="button" onclick="solicitarViaje()">Solicitar</button>
         <div class="status">Estado: <span id="rideStatus">Sin solicitud</span></div>
         <div class="status">Socket: <span id="wsStatus">Desconectado</span></div>
@@ -43,9 +51,24 @@
 
       <section class="map-card">
         <div id="map"></div>
-        <div class="overlay">Haz click en el mapa para mover el origen</div>
+        <div class="overlay">Click en el mapa para elegir destino</div>
       </section>
     </main>
+  </div>
+
+  <div id="driverModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalDriverName">Conductor</h3>
+        <button id="closeModal" class="ghost-button" type="button">Cerrar</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-row"><span>Vehiculo</span><strong id="modalVehicle">-</strong></div>
+        <div class="modal-row"><span>Calificacion</span><strong id="modalRating">-</strong></div>
+        <div class="modal-row"><span>Distancia</span><strong id="modalDistance">-</strong></div>
+      </div>
+      <button id="requestDriver" class="primary-button" type="button">Solicitar a este conductor</button>
+    </div>
   </div>
 
   <script>
@@ -83,7 +106,7 @@
         }
 
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async&libraries=marker`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
