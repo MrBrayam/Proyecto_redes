@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard Conductor | AristaRideAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="conductor.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-title">Panel Conductor</div>
+        <div class="brand-sub">AristaRideAI</div>
+      </div>
+      <div class="header-actions">
+        <div id="driverBadge" class="badge">Conductor</div>
+        <button id="logoutButton" class="ghost-button" type="button">Cerrar sesion</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="sidebar">
+        <article class="card profile">
+          <h2>Perfil</h2>
+          <div class="profile-row"><span>Nombre</span><strong id="profileName">-</strong></div>
+          <div class="profile-row"><span>Email</span><strong id="profileEmail">-</strong></div>
+          <div class="profile-row"><span>Licencia</span><strong id="profileLicense">-</strong></div>
+          <div class="profile-row"><span>Vehiculo</span><strong id="profileVehicle">-</strong></div>
+          <div class="profile-row"><span>Calificacion</span><strong id="profileRating">-</strong></div>
+          <div class="profile-row"><span>Estado</span><strong id="profileStatus">-</strong></div>
+        </article>
+
+        <article class="card actions">
+          <h3>Acciones rapidas</h3>
+          <button id="sendLocationButton" class="primary-button" type="button">Enviar ubicacion actual</button>
+          <div class="hint">Selecciona una solicitud antes de enviar ubicacion.</div>
+        </article>
+      </section>
+
+      <section class="requests">
+        <div class="section-header">
+          <h2>Solicitudes en cola</h2>
+          <span id="rideCount" class="pill">0</span>
+        </div>
+        <div id="rideList" class="ride-list"></div>
+      </section>
+
+      <section class="map-card">
+        <div id="map"></div>
+        <div id="mapOverlay" class="overlay">Esperando solicitudes...</div>
+      </section>
+    </main>
+  </div>
+
+  <script src="conductor.js"></script>
+  <script>
+    async function loadMapsScript() {
+      try {
+        const response = await fetch("/api/config/maps-key");
+        if (!response.ok) {
+          document.getElementById("mapOverlay").textContent = "Configura la API key en el servidor";
+          return;
+        }
+
+        const data = await response.json();
+        if (!data || !data.key) {
+          document.getElementById("mapOverlay").textContent = "API key no disponible";
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      } catch (error) {
+        document.getElementById("mapOverlay").textContent = "No se pudo cargar Google Maps";
+      }
+    }
+
+    loadMapsScript();
+  </script>
+</body>
+</html>

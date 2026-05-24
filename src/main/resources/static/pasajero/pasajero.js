@@ -2,6 +2,7 @@ let map;
 let pickupMarker;
 let driverMarker;
 let ws;
+let pendingRequest = false;
 
 function initMap() {
   const defaultPos = { lat: -6.501, lng: -76.365 };
@@ -83,28 +84,54 @@ function showDriverMarker(lat, lng) {
 }
 
 function solicitarViaje() {
+  if (pendingRequest) {
+    return;
+  }
   const origenLat = document.getElementById("origenLat").value;
   const origenLng = document.getElementById("origenLng").value;
   const destino = document.getElementById("destino").value.trim();
+  const token = localStorage.getItem("authToken");
 
   if (!destino) {
     alert("Ingresa un destino");
     return;
   }
-
-  const message = {
-    type: "ride-request",
-    origenLat,
-    origenLng,
-    destino
-  };
-
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
-    document.getElementById("rideStatus").textContent = "Solicitud enviada";
-  } else {
-    document.getElementById("rideStatus").textContent = "WebSocket no conectado";
+  if (!token) {
+    document.getElementById("rideStatus").textContent = "Inicia sesion para solicitar";
+    return;
   }
+
+  pendingRequest = true;
+  document.getElementById("rideStatus").textContent = "Buscando ubicacion de destino";
+
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: destino }, (results, status) => {
+    let destinoLat = origenLat;
+    let destinoLng = origenLng;
+
+    if (status === "OK" && results && results.length > 0) {
+      destinoLat = results[0].geometry.location.lat().toFixed(6);
+      destinoLng = results[0].geometry.location.lng().toFixed(6);
+    }
+
+    const message = {
+      type: "ride-request",
+      token,
+      origenLat,
+      origenLng,
+      destinoLat,
+      destinoLng,
+      destino
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+      document.getElementById("rideStatus").textContent = "Solicitud enviada";
+    } else {
+      document.getElementById("rideStatus").textContent = "WebSocket no conectado";
+    }
+    pendingRequest = false;
+  });
 }
 
 window.initMap = initMap;

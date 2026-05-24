@@ -33,6 +33,11 @@ public class ConductorService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conductor no encontrado"));
     }
 
+    public Conductor obtenerPorUsuarioId(Long usuarioId) {
+        return conductorRepository.findByUsuario_IdUsuario(usuarioId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conductor no encontrado"));
+    }
+
     public Conductor crear(Conductor conductor, Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuario no existe"));

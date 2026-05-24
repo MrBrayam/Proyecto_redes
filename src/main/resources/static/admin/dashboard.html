@@ -25,103 +25,114 @@
     <main class="main">
       <section class="grid">
         <article class="card">
-          <h3>Usuarios registrados</h3>
-          <p>Resumen general de cuentas activas</p>
+          <h3>Usuarios totales</h3>
+          <p class="stat-value" id="statUsuarios">-</p>
         </article>
         <article class="card">
-          <h3>Conductores activos</h3>
-          <p>Disponibles para aceptar viajes</p>
+          <h3>Pasajeros</h3>
+          <p class="stat-value" id="statPasajeros">-</p>
+        </article>
+        <article class="card">
+          <h3>Conductores disponibles</h3>
+          <p class="stat-value" id="statConductores">-</p>
         </article>
         <article class="card">
           <h3>Viajes hoy</h3>
-          <p>Solicitudes registradas en el dia</p>
-        </article>
-        <article class="card">
-          <h3>Alertas de red</h3>
-          <p>Eventos criticos y monitoreo</p>
+          <p class="stat-value" id="statViajes">-</p>
         </article>
       </section>
 
       <section class="card">
-        <h2 class="section-title">Acciones rapidas</h2>
-        <div class="list">
-          <div class="list-item">
-            <strong>Gestion de usuarios</strong>
-            <span>Revisar roles y accesos</span>
+        <h2 class="section-title">Gestion de usuarios</h2>
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Crear usuario</h3>
+            <form id="userForm" class="form-grid">
+              <input name="nombre" type="text" placeholder="Nombre" required />
+              <input name="email" type="email" placeholder="Correo" required />
+              <input name="password" type="password" placeholder="Contrasena" required />
+              <select name="rol" required>
+                <option value="PASAJERO">PASAJERO</option>
+                <option value="CONDUCTOR">CONDUCTOR</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+              <button class="primary-button" type="submit">Crear usuario</button>
+              <div id="userFormMessage" class="form-message"></div>
+            </form>
           </div>
-          <div class="list-item">
-            <strong>Control de conductores</strong>
-            <span>Habilitar o suspender</span>
-          </div>
-          <div class="list-item">
-            <strong>Monitoreo de red</strong>
-            <span>Panel de metricas</span>
+          <div class="panel-block">
+            <h3>Listado por rol</h3>
+            <div class="form-grid">
+              <select id="roleFilter">
+                <option value="">TODOS</option>
+                <option value="PASAJERO">PASAJERO</option>
+                <option value="CONDUCTOR">CONDUCTOR</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+            </div>
+            <div id="userList" class="data-list"></div>
           </div>
         </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Conductores</h2>
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Crear perfil conductor</h3>
+            <form id="conductorForm" class="form-grid">
+              <input name="usuarioId" type="number" placeholder="Usuario ID" required />
+              <input name="licencia" type="text" placeholder="Licencia" required />
+              <input name="vehiculo" type="text" placeholder="Vehiculo" />
+              <input name="calificacion" type="number" step="0.1" min="0" max="5" placeholder="Calificacion" />
+              <select name="disponible">
+                <option value="true">Disponible</option>
+                <option value="false">No disponible</option>
+              </select>
+              <button class="primary-button" type="submit">Crear conductor</button>
+              <div id="conductorFormMessage" class="form-message"></div>
+            </form>
+          </div>
+          <div class="panel-block">
+            <h3>Conductores actuales</h3>
+            <div id="conductorList" class="data-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Pasajeros</h2>
+        <div id="pasajeroList" class="data-list"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Reportes del servicio</h2>
+        <div class="report-controls">
+          <select id="reportPeriod">
+            <option value="dia">Dia</option>
+            <option value="mes">Mes</option>
+            <option value="anio">Anio</option>
+          </select>
+          <input id="reportDate" type="date" />
+          <input id="reportMonth" type="month" />
+          <input id="reportYear" type="number" min="2020" max="2100" placeholder="Anio" />
+          <button id="loadReport" class="primary-button" type="button">Actualizar</button>
+          <button id="exportReport" class="ghost-button" type="button">Exportar CSV</button>
+        </div>
+        <div class="report-summary">
+          <div class="summary-item"><span>Viajes</span><strong id="reportViajes">-</strong></div>
+          <div class="summary-item"><span>Usuarios</span><strong id="reportUsuarios">-</strong></div>
+          <div class="summary-item"><span>Pasajeros</span><strong id="reportPasajeros">-</strong></div>
+          <div class="summary-item"><span>Conductores</span><strong id="reportConductores">-</strong></div>
+          <div class="summary-item"><span>Administradores</span><strong id="reportAdmins">-</strong></div>
+        </div>
+        <div id="reportChart" class="chart"></div>
       </section>
     </main>
 
     <footer class="footer">Dashboard basico de administracion</footer>
   </div>
 
-  <script>
-    const badge = document.getElementById("adminBadge");
-    const logoutButton = document.getElementById("logoutButton");
-
-    function redirectToLogin() {
-      window.location.href = "/auth/login-admin.html";
-    }
-
-    function getToken() {
-      return localStorage.getItem("authToken");
-    }
-
-    async function validarSesion() {
-      const token = getToken();
-      if (!token) {
-        redirectToLogin();
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/auth/me", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-          redirectToLogin();
-          return;
-        }
-
-        const data = await response.json();
-        if (!data || !data.usuario || data.usuario.rol !== "ADMIN") {
-          redirectToLogin();
-          return;
-        }
-
-        badge.textContent = data.usuario.nombre || "Administrador";
-      } catch (error) {
-        redirectToLogin();
-      }
-    }
-
-    logoutButton.addEventListener("click", async () => {
-      const token = getToken();
-      if (token) {
-        try {
-          await fetch("/api/auth/logout", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${token}` }
-          });
-        } catch (error) {
-          // Ignore network errors for logout
-        }
-      }
-      localStorage.removeItem("authToken");
-      redirectToLogin();
-    });
-
-    validarSesion();
-  </script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
