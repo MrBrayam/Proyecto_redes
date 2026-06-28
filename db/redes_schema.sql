@@ -104,9 +104,67 @@ CREATE TABLE IF NOT EXISTS calificaciones (
   CONSTRAINT fk_calificacion_usuario FOREIGN KEY (calificador_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
+-- Notificaciones (FASE 5)
+CREATE TABLE IF NOT EXISTS notificaciones (
+  id_notificacion BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
+  titulo VARCHAR(255) NOT NULL,
+  mensaje TEXT,
+  tipo VARCHAR(50) NOT NULL DEFAULT 'INFORMACION',
+  leida BOOLEAN NOT NULL DEFAULT FALSE,
+  id_viaje BIGINT,
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  leido_en TIMESTAMP,
+  CONSTRAINT fk_notificacion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+  CONSTRAINT fk_notificacion_viaje FOREIGN KEY (id_viaje) REFERENCES viajes(id_viaje) ON DELETE SET NULL
+);
+
+-- Métodos de Pago (FASE 6)
+CREATE TABLE IF NOT EXISTS metodos_pago (
+  id_metodo_pago BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
+  tipo VARCHAR(50) NOT NULL,  -- TARJETA_CREDITO, TARJETA_DEBITO, WALLET
+  ultimos_cuatro_digitos VARCHAR(4) NOT NULL,
+  nombre_titular VARCHAR(255) NOT NULL,
+  stripe_payment_method_id VARCHAR(255),
+  predeterminado BOOLEAN NOT NULL DEFAULT FALSE,
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP,
+  CONSTRAINT fk_metodo_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+  UNIQUE KEY uk_stripe_method_id (stripe_payment_method_id)
+);
+
+-- Transacciones (FASE 6)
+CREATE TABLE IF NOT EXISTS transacciones (
+  id_transaccion BIGINT AUTO_INCREMENT PRIMARY KEY,
+  viaje_id BIGINT NOT NULL,
+  usuario_pagador_id BIGINT NOT NULL,  -- Generalmente el pasajero
+  metodo_pago_id BIGINT NOT NULL,
+  monto DECIMAL(10, 2) NOT NULL,
+  comision DECIMAL(10, 2) NOT NULL,  -- 10% de la plataforma
+  ganancia_conductor DECIMAL(10, 2) NOT NULL,  -- 90% para el conductor
+  estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE',  -- PENDIENTE, PROCESANDO, COMPLETADA, FALLIDA, REEMBOLSADA
+  stripe_payment_intent_id VARCHAR(255),
+  descripcion TEXT,
+  razon_fallo TEXT,
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  procesado_en TIMESTAMP,
+  completado_en TIMESTAMP,
+  CONSTRAINT fk_transaccion_viaje FOREIGN KEY (viaje_id) REFERENCES viajes(id_viaje) ON DELETE CASCADE,
+  CONSTRAINT fk_transaccion_usuario FOREIGN KEY (usuario_pagador_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+  CONSTRAINT fk_transaccion_metodo FOREIGN KEY (metodo_pago_id) REFERENCES metodos_pago(id_metodo_pago) ON DELETE RESTRICT,
+  UNIQUE KEY uk_stripe_intent (stripe_payment_intent_id)
+);
+
 -- Índices útiles
 CREATE INDEX IF NOT EXISTS idx_viaje_estado ON viajes(estado);
 CREATE INDEX IF NOT EXISTS idx_conductor_disponible ON conductores(disponible);
+CREATE INDEX IF NOT EXISTS idx_notificacion_usuario ON notificaciones(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_notificacion_leida ON notificaciones(usuario_id, leida);
+CREATE INDEX IF NOT EXISTS idx_metodo_pago_usuario ON metodos_pago(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_transaccion_estado ON transacciones(estado);
+CREATE INDEX IF NOT EXISTS idx_transaccion_conductor ON transacciones(usuario_pagador_id);
+CREATE INDEX IF NOT EXISTS idx_transaccion_stripe ON transacciones(stripe_payment_intent_id);
 
 -- 4) Datos de ejemplo (útiles para pruebas locales)
 INSERT INTO usuarios (nombre, email, password, rol) VALUES

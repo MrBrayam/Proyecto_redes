@@ -5,6 +5,7 @@ import api.proyecto.redes.model.Calificacion;
 import api.proyecto.redes.model.Cancelacion;
 import api.proyecto.redes.model.Conductor;
 import api.proyecto.redes.model.EstadoViaje;
+import api.proyecto.redes.model.TipoNotificacion;
 import api.proyecto.redes.model.Usuario;
 import api.proyecto.redes.model.Viaje;
 import api.proyecto.redes.repository.CalificacionRepository;
@@ -24,13 +25,16 @@ public class ViajeService {
     private final ViajeRepository viajeRepository;
     private final CalificacionRepository calificacionRepository;
     private final CancelacionRepository cancelacionRepository;
+    private final NotificacionService notificacionService;
 
     public ViajeService(ViajeRepository viajeRepository,
                         CalificacionRepository calificacionRepository,
-                        CancelacionRepository cancelacionRepository) {
+                        CancelacionRepository cancelacionRepository,
+                        NotificacionService notificacionService) {
         this.viajeRepository = viajeRepository;
         this.calificacionRepository = calificacionRepository;
         this.cancelacionRepository = cancelacionRepository;
+        this.notificacionService = notificacionService;
     }
 
     // ==================== FASE 1: Conductores y Tarifa ====================
@@ -80,6 +84,31 @@ public class ViajeService {
         // Cambiar estado del viaje
         viaje.setEstado(EstadoViaje.CANCELADO);
         viajeRepository.save(viaje);
+
+        // Enviar notificaciones
+        String motivoText = motivo != null ? motivo : "Sin especificar";
+        
+        if (esPasajero) {
+            // Notificar al conductor si existe
+            if (viaje.getConductor() != null) {
+                notificacionService.enviarNotificacionViaje(
+                    viaje.getConductor().getUsuario().getIdUsuario(),
+                    "Viaje cancelado",
+                    "El pasajero canceló el viaje. Motivo: " + motivoText,
+                    TipoNotificacion.VIAJE_CANCELADO,
+                    viaje.getIdViaje()
+                );
+            }
+        } else {
+            // Notificar al pasajero
+            notificacionService.enviarNotificacionViaje(
+                viaje.getPasajero().getIdUsuario(),
+                "Viaje cancelado",
+                "El conductor canceló el viaje. Motivo: " + motivoText,
+                TipoNotificacion.VIAJE_CANCELADO,
+                viaje.getIdViaje()
+            );
+        }
 
         return cancelacion;
     }
@@ -207,7 +236,18 @@ public class ViajeService {
         }
         viaje.setConductor(conductor);
         viaje.setEstado(EstadoViaje.ACEPTADO);
-        return viajeRepository.save(viaje);
+        Viaje viajeGuardado = viajeRepository.save(viaje);
+
+        // Enviar notificación al pasajero
+        notificacionService.enviarNotificacionViaje(
+            viaje.getPasajero().getIdUsuario(),
+            "¡Conductor asignado!",
+            "El conductor " + conductor.getUsuario().getNombre() + " ha aceptado tu viaje. Vehículo: " + conductor.getVehiculo(),
+            TipoNotificacion.VIAJE_ACEPTADO,
+            viaje.getIdViaje()
+        );
+
+        return viajeGuardado;
     }
 
     public Viaje rechazarViaje(Long id) {
@@ -222,7 +262,30 @@ public class ViajeService {
     public Viaje finalizarViaje(Long id) {
         Viaje viaje = obtenerPorId(id);
         viaje.setEstado(EstadoViaje.FINALIZADO);
-        return viajeRepository.save(viaje);
+        Viaje viajeGuardado = viajeRepository.save(viaje);
+
+        // Enviar notificación al pasajero
+        notificacionService.enviarNotificacionViaje(
+            viaje.getPasajero().getIdUsuario(),
+            "Viaje completado",
+            "Tu viaje ha finalizado. Tarifa: S/. " + viaje.getPrecio(),
+            TipoNotificacion.VIAJE_FINALIZADO,
+            viaje.getIdViaje()
+        );
+
+        // Enviar notificación al conductor
+        if (viaje.getConductor() != null) {
+            BigDecimal gananciaConductor = TarifaCalculadora.calcularGananciaConductor(viaje.getPrecio());
+            notificacionService.enviarNotificacionViaje(
+                viaje.getConductor().getUsuario().getIdUsuario(),
+                "Viaje completado",
+                "Ganancia: S/. " + gananciaConductor,
+                TipoNotificacion.VIAJE_FINALIZADO,
+                viaje.getIdViaje()
+            );
+        }
+
+        return viajeGuardado;
     }
 
     public List<Viaje> listarPorPasajero(Long usuarioId) {
