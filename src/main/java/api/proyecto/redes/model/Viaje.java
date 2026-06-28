@@ -47,8 +47,17 @@ public class Viaje {
     @Column(nullable = false, length = 50)
     private EstadoViaje estado;
 
+    @Column(name = "precio_base", precision = 10, scale = 2)
+    private BigDecimal precioBase;
+
     @Column(precision = 10, scale = 2)
     private BigDecimal precio;
+
+    @Column(name = "multiplicador_demanda", precision = 3, scale = 2)
+    private BigDecimal multiplicadorDemanda = BigDecimal.ONE;
+
+    @Column(name = "distancia_km", precision = 8, scale = 3)
+    private BigDecimal distanciaKm;
 
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
@@ -120,12 +129,36 @@ public class Viaje {
         this.estado = estado;
     }
 
+    public BigDecimal getPrecioBase() {
+        return precioBase;
+    }
+
+    public void setPrecioBase(BigDecimal precioBase) {
+        this.precioBase = precioBase;
+    }
+
     public BigDecimal getPrecio() {
         return precio;
     }
 
     public void setPrecio(BigDecimal precio) {
         this.precio = precio;
+    }
+
+    public BigDecimal getMultiplicadorDemanda() {
+        return multiplicadorDemanda;
+    }
+
+    public void setMultiplicadorDemanda(BigDecimal multiplicadorDemanda) {
+        this.multiplicadorDemanda = multiplicadorDemanda;
+    }
+
+    public BigDecimal getDistanciaKm() {
+        return distanciaKm;
+    }
+
+    public void setDistanciaKm(BigDecimal distanciaKm) {
+        this.distanciaKm = distanciaKm;
     }
 
     public LocalDateTime getCreadoEn() {
@@ -144,3 +177,4 @@ public class Viaje {
         this.actualizadoEn = actualizadoEn;
     }
 }
+

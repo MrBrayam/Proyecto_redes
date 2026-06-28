@@ -59,14 +59,40 @@ CREATE TABLE IF NOT EXISTS viajes (
   destino_lat DECIMAL(10,7) NOT NULL,
   destino_lng DECIMAL(10,7) NOT NULL,
   estado VARCHAR(50) NOT NULL DEFAULT 'SOLICITADO',
+  precio_base DECIMAL(10,2) DEFAULT 0,
   precio DECIMAL(10,2) DEFAULT 0,
+  multiplicador_demanda DECIMAL(3,2) DEFAULT 1.00,
+  distancia_km DECIMAL(8,3),
   creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_viaje_pasajero FOREIGN KEY (pasajero_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
   CONSTRAINT fk_viaje_conductor FOREIGN KEY (conductor_id) REFERENCES conductores(id_conductor) ON DELETE SET NULL
 );
 
--- Calificaciones
+-- Ubicaciones de Conductores (Fase 1)
+CREATE TABLE IF NOT EXISTS conductor_ubicaciones (
+  id_ubicacion BIGINT AUTO_INCREMENT PRIMARY KEY,
+  conductor_id BIGINT NOT NULL UNIQUE,
+  latitud DECIMAL(10,7) NOT NULL,
+  longitud DECIMAL(10,7) NOT NULL,
+  actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ubicacion_conductor FOREIGN KEY (conductor_id) REFERENCES conductores(id_conductor) ON DELETE CASCADE
+);
+
+-- Cancelaciones (Fase 2)
+CREATE TABLE IF NOT EXISTS cancelaciones (
+  id_cancelacion BIGINT AUTO_INCREMENT PRIMARY KEY,
+  viaje_id BIGINT NOT NULL,
+  usuario_id BIGINT NOT NULL,
+  tipo_cancelacion VARCHAR(20) NOT NULL DEFAULT 'PASAJERO',
+  motivo VARCHAR(255),
+  monto DECIMAL(10,2),
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_cancelacion_viaje FOREIGN KEY (viaje_id) REFERENCES viajes(id_viaje) ON DELETE CASCADE,
+  CONSTRAINT fk_cancelacion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);
+
+-- Calificaciones (Fase 3)
 CREATE TABLE IF NOT EXISTS calificaciones (
   id_calificacion BIGINT AUTO_INCREMENT PRIMARY KEY,
   viaje_id BIGINT NOT NULL,

@@ -24,4 +24,23 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
         + "from viajes where year(creado_en) = :anio "
         + "group by month(creado_en) order by month(creado_en)", nativeQuery = true)
     List<SerieConteoRow> conteoPorMes(@Param("anio") int anio);
+
+    // Nuevos métodos para Fase 1-4
+    @Query("SELECT v FROM Viaje v WHERE v.pasajero.idUsuario = :usuarioId ORDER BY v.creadoEn DESC")
+    List<Viaje> obtenerHistorialPasajero(@Param("usuarioId") Long usuarioId);
+
+    @Query("SELECT v FROM Viaje v WHERE v.conductor.idConductor = :conductorId ORDER BY v.creadoEn DESC")
+    List<Viaje> obtenerHistorialConductor(@Param("conductorId") Long conductorId);
+
+    @Query("SELECT v FROM Viaje v WHERE v.estado = :estado ORDER BY v.creadoEn DESC")
+    List<Viaje> obtenerViajePorEstado(@Param("estado") EstadoViaje estado);
+
+    @Query("SELECT COUNT(v) FROM Viaje v WHERE v.estado = :estado AND v.creadoEn >= :desde AND v.creadoEn <= :hasta")
+    long countByEstadoYFecha(@Param("estado") EstadoViaje estado, 
+                             @Param("desde") LocalDateTime desde,
+                             @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT SUM(v.precio) FROM Viaje v WHERE v.conductor.idConductor = :conductorId AND v.estado = :estado")
+    Double sumGananciasConductor(@Param("conductorId") Long conductorId, 
+                                 @Param("estado") EstadoViaje estado);
 }
