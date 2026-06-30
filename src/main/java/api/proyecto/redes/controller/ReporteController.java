@@ -1,6 +1,8 @@
 package api.proyecto.redes.controller;
 
 import api.proyecto.redes.dto.AuthResponse;
+import api.proyecto.redes.dto.RankingConductorResponse;
+import api.proyecto.redes.dto.ReporteAdminResumenResponse;
 import api.proyecto.redes.dto.ReporteResumenResponse;
 import api.proyecto.redes.dto.ReporteSeriePunto;
 import api.proyecto.redes.model.RolUsuario;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/reportes")
@@ -63,6 +66,31 @@ public class ReporteController {
         validarAdmin(authorization, tokenHeader);
         int target = anio == null ? LocalDate.now().getYear() : anio;
         return reporteService.reporteAnio(target);
+    }
+
+    @GetMapping("/resumen")
+    public ReporteAdminResumenResponse resumenRango(
+        @RequestParam("desde") String desde,
+        @RequestParam("hasta") String hasta,
+        @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+        @RequestHeader(value = "X-Auth-Token", required = false) String tokenHeader) {
+        validarAdmin(authorization, tokenHeader);
+        LocalDate fechaDesde = LocalDate.parse(desde);
+        LocalDate fechaHasta = LocalDate.parse(hasta);
+        return reporteService.reporteRango(fechaDesde, fechaHasta);
+    }
+
+    @GetMapping("/conductores/ranking")
+    public List<RankingConductorResponse> rankingConductores(
+        @RequestParam(value = "desde", required = false) String desde,
+        @RequestParam(value = "hasta", required = false) String hasta,
+        @RequestParam(value = "limite", required = false) Integer limite,
+        @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+        @RequestHeader(value = "X-Auth-Token", required = false) String tokenHeader) {
+        validarAdmin(authorization, tokenHeader);
+        LocalDate fechaDesde = (desde == null || desde.isBlank()) ? null : LocalDate.parse(desde);
+        LocalDate fechaHasta = (hasta == null || hasta.isBlank()) ? null : LocalDate.parse(hasta);
+        return reporteService.rankingConductores(fechaDesde, fechaHasta, limite == null ? 10 : limite);
     }
 
     @GetMapping("/export")

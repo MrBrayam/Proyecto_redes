@@ -14,6 +14,10 @@ const reportMonth = document.getElementById("reportMonth");
 const reportYear = document.getElementById("reportYear");
 const loadReportButton = document.getElementById("loadReport");
 const exportReportButton = document.getElementById("exportReport");
+const summaryDesde = document.getElementById("summaryDesde");
+const summaryHasta = document.getElementById("summaryHasta");
+const loadSummaryButton = document.getElementById("loadSummary");
+const rankingConductores = document.getElementById("rankingConductores");
 
 function getToken() {
   return localStorage.getItem("authToken");
@@ -312,6 +316,64 @@ function renderChart(series) {
   });
 }
 
+function formatMoney(value) {
+  const numeric = Number(value || 0);
+  return `S/. ${numeric.toFixed(2)}`;
+}
+
+async function cargarResumenEjecutivo() {
+  const hoy = new Date();
+  const hace30 = new Date(hoy);
+  hace30.setDate(hoy.getDate() - 30);
+
+  if (!summaryDesde.value) {
+    summaryDesde.value = hace30.toISOString().slice(0, 10);
+  }
+  if (!summaryHasta.value) {
+    summaryHasta.value = hoy.toISOString().slice(0, 10);
+  }
+
+  const resumenUrl = `/api/admin/reportes/resumen?desde=${summaryDesde.value}&hasta=${summaryHasta.value}`;
+  const resumenResponse = await apiFetch(resumenUrl);
+  if (resumenResponse && resumenResponse.ok) {
+    const resumen = await resumenResponse.json();
+    document.getElementById("summaryFinalizados").textContent = resumen.viajesFinalizados ?? 0;
+    document.getElementById("summaryCancelados").textContent = resumen.viajesCancelados ?? 0;
+    document.getElementById("summaryUsuariosNuevos").textContent = resumen.usuariosNuevos ?? 0;
+    document.getElementById("summaryIngresos").textContent = formatMoney(resumen.ingresosBrutos);
+    document.getElementById("summaryComisiones").textContent = formatMoney(resumen.comisionesPlataforma);
+    document.getElementById("summaryGananciasConductores").textContent = formatMoney(resumen.gananciasConductores);
+  }
+
+  const rankingUrl = `/api/admin/reportes/conductores/ranking?desde=${summaryDesde.value}&hasta=${summaryHasta.value}&limite=10`;
+  const rankingResponse = await apiFetch(rankingUrl);
+  if (!rankingResponse || !rankingResponse.ok) {
+    return;
+  }
+
+  const ranking = await rankingResponse.json();
+  rankingConductores.innerHTML = "";
+  if (!ranking.length) {
+    rankingConductores.innerHTML = '<div class="data-row">Sin datos para el rango seleccionado.</div>';
+    return;
+  }
+
+  ranking.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "data-row";
+    row.innerHTML = `
+      <div>
+        <strong>#${index + 1} ${item.nombre}</strong><br />
+        <span>${item.vehiculo || "-"} | Rating: ${item.calificacionPromedio ?? 0}</span>
+      </div>
+      <div class="data-actions">
+        <span class="pill money">${formatMoney(item.ganancias)}</span>
+      </div>
+    `;
+    rankingConductores.appendChild(row);
+  });
+}
+
 async function exportarReporte() {
   let url = `/api/admin/reportes/export?periodo=${reportPeriod.value}`;
   if (reportPeriod.value === "dia" && reportDate.value) {
@@ -346,6 +408,7 @@ reportPeriod.addEventListener("change", () => {
 
 loadReportButton.addEventListener("click", cargarReporte);
 exportReportButton.addEventListener("click", exportarReporte);
+loadSummaryButton.addEventListener("click", cargarResumenEjecutivo);
 
 (async () => {
   const ok = await validarSesion();
@@ -358,4 +421,5 @@ exportReportButton.addEventListener("click", exportarReporte);
   await cargarConductores();
   await cargarPasajeros();
   await cargarReporte();
+  await cargarResumenEjecutivo();
 })();

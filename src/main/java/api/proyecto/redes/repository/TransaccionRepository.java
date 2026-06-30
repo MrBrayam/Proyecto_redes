@@ -60,4 +60,26 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
      * Busca por Stripe Payment Intent ID
      */
     Optional<Transaccion> findByStripePaymentIntentId(String stripePaymentIntentId);
+
+    /**
+     * Obtiene transacciones por estado en un rango de fecha de completado
+     */
+    List<Transaccion> findByEstadoAndCompletadoEnBetween(EstadoTransaccion estado,
+                                                         LocalDateTime desde,
+                                                         LocalDateTime hasta);
+
+    @Query("SELECT COALESCE(SUM(t.monto), 0) FROM Transaccion t WHERE t.estado = :estado AND t.completadoEn >= :desde AND t.completadoEn < :hasta")
+    BigDecimal sumMontoByEstadoYRango(@Param("estado") EstadoTransaccion estado,
+                                      @Param("desde") LocalDateTime desde,
+                                      @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT COALESCE(SUM(t.comision), 0) FROM Transaccion t WHERE t.estado = :estado AND t.completadoEn >= :desde AND t.completadoEn < :hasta")
+    BigDecimal sumComisionByEstadoYRango(@Param("estado") EstadoTransaccion estado,
+                                         @Param("desde") LocalDateTime desde,
+                                         @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT COALESCE(SUM(t.gananciaConductor), 0) FROM Transaccion t WHERE t.estado = :estado AND t.completadoEn >= :desde AND t.completadoEn < :hasta")
+    BigDecimal sumGananciaConductorByEstadoYRango(@Param("estado") EstadoTransaccion estado,
+                                                  @Param("desde") LocalDateTime desde,
+                                                  @Param("hasta") LocalDateTime hasta);
 }

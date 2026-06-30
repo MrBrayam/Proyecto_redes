@@ -128,6 +128,25 @@
         </div>
         <div id="reportChart" class="chart"></div>
       </section>
+
+      <section class="card">
+        <h2 class="section-title">Resumen ejecutivo y ranking</h2>
+        <div class="report-controls">
+          <input id="summaryDesde" type="date" />
+          <input id="summaryHasta" type="date" />
+          <button id="loadSummary" class="primary-button" type="button">Cargar resumen</button>
+        </div>
+        <div class="report-summary">
+          <div class="summary-item"><span>Viajes finalizados</span><strong id="summaryFinalizados">-</strong></div>
+          <div class="summary-item"><span>Viajes cancelados</span><strong id="summaryCancelados">-</strong></div>
+          <div class="summary-item"><span>Usuarios nuevos</span><strong id="summaryUsuariosNuevos">-</strong></div>
+          <div class="summary-item"><span>Ingresos brutos</span><strong id="summaryIngresos">-</strong></div>
+          <div class="summary-item"><span>Comisiones plataforma</span><strong id="summaryComisiones">-</strong></div>
+          <div class="summary-item"><span>Ganancias conductores</span><strong id="summaryGananciasConductores">-</strong></div>
+        </div>
+        <h3 class="subsection-title">Top conductores</h3>
+        <div id="rankingConductores" class="data-list"></div>
+      </section>
     </main>
 
     <footer class="footer">Dashboard basico de administracion</footer>
