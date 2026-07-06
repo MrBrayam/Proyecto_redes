@@ -55,20 +55,24 @@ public class ConductorCercanoController {
     }
 
     private Optional<ConductorCercanoResponse> toCercano(Conductor conductor,
-                                                        ConductorLocationSnapshot snapshot,
-                                                        double origenLat,
-                                                        double origenLng) {
+                                                         ConductorLocationSnapshot snapshot,
+                                                         double origenLat,
+                                                         double origenLng) {
         double distancia = snapshot == null
             ? -1
             : haversineKm(origenLat, origenLng, snapshot.lat(), snapshot.lng());
         String nombre = conductor.getUsuario() != null ? conductor.getUsuario().getNombre() : "Conductor";
+        Double lat = snapshot == null ? null : snapshot.lat();
+        Double lng = snapshot == null ? null : snapshot.lng();
         return Optional.of(new ConductorCercanoResponse(
             conductor.getIdConductor(),
             nombre,
             conductor.getVehiculo(),
             conductor.getCalificacionPromedio(),
             Boolean.TRUE.equals(conductor.getDisponible()),
-            distancia
+            distancia,
+            lat,
+            lng
         ));
     }
 

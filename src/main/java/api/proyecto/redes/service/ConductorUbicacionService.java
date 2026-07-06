@@ -82,13 +82,17 @@ public class ConductorUbicacionService {
             .map(ub -> {
                 double distancia = GeoUtils.calcularDistanciaKm(lat, lng, ub.getLatitud(), ub.getLongitud());
                 Conductor conductor = ub.getConductor();
+                Double latVal = ub.getLatitud() != null ? ub.getLatitud().doubleValue() : null;
+                Double lngVal = ub.getLongitud() != null ? ub.getLongitud().doubleValue() : null;
                 return new ConductorCercanoResponse(
                     conductor.getIdConductor(),
                     conductor.getUsuario().getNombre(),
                     conductor.getVehiculo(),
                     conductor.getCalificacionPromedio() != null ? conductor.getCalificacionPromedio() : BigDecimal.ZERO,
                     true,
-                    distancia
+                    distancia,
+                    latVal,
+                    lngVal
                 );
             })
             .sorted((a, b) -> Double.compare(a.distanciaKm(), b.distanciaKm()))

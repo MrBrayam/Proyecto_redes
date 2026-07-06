@@ -6,81 +6,169 @@
   <title>Panel Pasajero | AristaRideAI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="pasajero.css" />
 </head>
 <body>
   <div class="page">
+    <!-- Header -->
     <header class="header">
       <div class="brand">
-        <div class="brand-title">Panel Pasajero</div>
-        <div class="brand-sub">AristaRideAI</div>
+        <div class="brand-title">AristaRideAI</div>
+        <div class="brand-sub">Panel del Pasajero</div>
       </div>
       <div class="header-actions">
-        <button id="logoutButton" class="ghost-button" type="button">Cerrar sesion</button>
+        <div class="status-connection">
+          <span class="status-indicator" id="wsIndicator"></span>
+          <span id="wsStatus">WebSocket: Desconectado</span>
+        </div>
+        <button id="logoutButton" class="logout-btn" type="button">
+          Cerrar sesión
+        </button>
       </div>
     </header>
 
+    <!-- Main Content Grid -->
     <main class="main">
+      <!-- Sidebar Control Panel -->
       <section class="panel">
-        <h2>Solicitar viaje</h2>
-        <div>
-          <label for="origenLat">Origen lat</label>
-          <input id="origenLat" type="text" readonly />
+        <div class="panel-header">
+          <h2>Solicitar un Viaje</h2>
+          <p class="panel-subtitle">Ingresa tu destino para ver conductores cercanos y calcular tarifas.</p>
         </div>
-        <div>
-          <label for="origenLng">Origen lng</label>
-          <input id="origenLng" type="text" readonly />
+
+        <div class="form-group">
+          <label>Punto de Recogida</label>
+          <div class="coords-row">
+            <input id="origenLat" type="text" placeholder="Latitud" readonly />
+            <input id="origenLng" type="text" placeholder="Longitud" readonly />
+          </div>
+          <button id="btnUsarUbicacion" class="gps-button" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            Usar mi ubicación actual (GPS)
+          </button>
         </div>
-        <div>
+
+        <div class="form-group">
           <label for="destino">Destino</label>
-          <input id="destino" type="text" placeholder="Ingresa un destino" />
+          <div class="input-with-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            <input id="destino" type="text" placeholder="¿A dónde vas?" />
+          </div>
         </div>
-        <button id="buscarConductores" class="ghost-button" type="button">Ver conductores cercanos</button>
+
+        <button id="buscarConductores" class="secondary-button" type="button">
+          Ver conductores cercanos
+        </button>
+
+        <!-- Trip Preview Summary -->
         <div class="trip-preview">
-          <div class="trip-preview-title">Resumen estimado</div>
-          <div class="trip-row"><span>Distancia</span><strong id="routeDistance">-</strong></div>
-          <div class="trip-row"><span>Tiempo</span><strong id="routeDuration">-</strong></div>
-          <div class="trip-row"><span>Costo aprox.</span><strong id="routeFare">-</strong></div>
+          <div class="trip-preview-title">Resumen del Viaje</div>
+          <div class="trip-row">
+            <span>Distancia</span>
+            <strong id="routeDistance">-</strong>
+          </div>
+          <div class="trip-row">
+            <span>Tiempo Estimado</span>
+            <strong id="routeDuration">-</strong>
+          </div>
+          <div class="trip-row highlight">
+            <span>Costo Estimado</span>
+            <strong id="routeFare">-</strong>
+          </div>
         </div>
+
+        <!-- Nearby Drivers Section -->
         <div class="drivers">
           <div class="drivers-header">
-            <strong>Conductores cercanos</strong>
+            <strong>Conductores Disponibles</strong>
             <span id="driversCount" class="pill">0</span>
           </div>
-          <div id="driversList" class="drivers-list"></div>
+          <div id="driversList" class="drivers-list">
+            <div class="status-placeholder">
+              Arrastra el marcador azul o usa el GPS para buscar conductores cercanos.
+            </div>
+          </div>
         </div>
-        <button class="primary-button" type="button" onclick="solicitarViaje()">Solicitar</button>
-        <div class="status">Estado: <span id="rideStatus">Sin solicitud</span></div>
-        <div class="status">Socket: <span id="wsStatus">Desconectado</span></div>
+
+        <button class="primary-button" id="btnSolicitarGeneral" type="button" onclick="solicitarViaje()">
+          Solicitar Viaje
+        </button>
+
+        <div class="status-container">
+          <span>Estado:</span>
+          <span id="rideStatus" class="status-badge">Sin solicitud activa</span>
+        </div>
       </section>
 
+      <!-- Map Display Panel -->
       <section class="map-card">
         <div id="map"></div>
-        <div class="overlay">Click en el mapa para elegir destino</div>
+        <div class="overlay">Click en el mapa para marcar tu destino o arrastra el marcador azul para cambiar tu origen</div>
+
+        <!-- Active Ride Overlay State -->
+        <div id="activeRideOverlay" class="active-ride-overlay hidden">
+          <div class="pulse-loader"></div>
+          <div class="overlay-text-group">
+            <h3 id="overlayTitle">Buscando Conductor</h3>
+            <p id="overlayMessage">Hemos enviado tu solicitud a los conductores más cercanos...</p>
+          </div>
+          <div id="overlayDriverCard" class="overlay-driver-card hidden">
+            <div class="driver-avatar-placeholder">🚗</div>
+            <div class="overlay-driver-info">
+              <strong id="overlayDriverName">-</strong>
+              <span id="overlayDriverVehicle">-</span>
+            </div>
+          </div>
+          <button id="btnCancelarViajeActivo" class="cancel-active-btn" type="button">Cancelar Viaje</button>
+        </div>
       </section>
     </main>
   </div>
 
+  <!-- Modal: Conductor Details -->
   <div id="driverModal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-header">
         <h3 id="modalDriverName">Conductor</h3>
-        <button id="closeModal" class="ghost-button" type="button">Cerrar</button>
+        <button id="closeModal" class="close-btn" type="button">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="modal-row"><span>Vehiculo</span><strong id="modalVehicle">-</strong></div>
-        <div class="modal-row"><span>Calificacion</span><strong id="modalRating">-</strong></div>
+        <div class="modal-row"><span>Vehículo</span><strong id="modalVehicle">-</strong></div>
+        <div class="modal-row"><span>Calificación</span><strong id="modalRating">-</strong></div>
         <div class="modal-row"><span>Distancia</span><strong id="modalDistance">-</strong></div>
       </div>
       <button id="requestDriver" class="primary-button" type="button">Solicitar a este conductor</button>
     </div>
   </div>
 
+  <!-- Modal: Star Rating for Completed Trip -->
+  <div id="ratingModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Califica tu Viaje</h3>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <p>¿Qué te pareció el viaje con tu conductor?</p>
+        <div class="star-rating" id="starRatingContainer">
+          <span class="star" data-value="1">★</span>
+          <span class="star" data-value="2">★</span>
+          <span class="star" data-value="3">★</span>
+          <span class="star" data-value="4">★</span>
+          <span class="star" data-value="5">★</span>
+        </div>
+        <div id="starLabel" style="font-weight: 600; margin-bottom: 12px; color: var(--accent);">Excelente</div>
+        <textarea id="ratingComment" placeholder="Deja un comentario para mejorar nuestro servicio (opcional)..."></textarea>
+      </div>
+      <button id="submitRating" class="primary-button" type="button">Enviar calificación</button>
+    </div>
+  </div>
+
+  <!-- Main scripts -->
   <script>
     const logoutButton = document.getElementById("logoutButton");
     logoutButton.addEventListener("click", async () => {
-      const token = localStorage.getItem("authToken");
+      const token = localStorage.getItem("passengerAuthToken");
       if (token) {
         try {
           await fetch("/api/auth/logout", {
@@ -91,7 +179,7 @@
           // ignore
         }
       }
-      localStorage.removeItem("authToken");
+      localStorage.removeItem("passengerAuthToken");
       window.location.href = "/auth/login-cliente.html";
     });
   </script>
@@ -112,7 +200,7 @@
         }
 
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async&libraries=marker`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async&libraries=marker,places`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);

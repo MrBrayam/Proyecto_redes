@@ -8,6 +8,8 @@ public record ConductorCercanoResponse(
     String vehiculo,
     BigDecimal calificacionPromedio,
     boolean disponible,
-    double distanciaKm
+    double distanciaKm,
+    Double lat,
+    Double lng
 ) {
 }

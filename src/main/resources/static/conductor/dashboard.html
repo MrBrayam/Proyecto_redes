@@ -6,49 +6,74 @@
   <title>Dashboard Conductor | AristaRideAI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="conductor.css" />
 </head>
 <body>
   <div class="page">
+    <!-- Header -->
     <header class="header">
       <div class="brand">
-        <div class="brand-title">Panel Conductor</div>
-        <div class="brand-sub">AristaRideAI</div>
+        <div class="brand-title">AristaRideAI</div>
+        <div class="brand-sub">Panel del Conductor</div>
       </div>
       <div class="header-actions">
         <div id="driverBadge" class="badge">Conductor</div>
-        <button id="logoutButton" class="ghost-button" type="button">Cerrar sesion</button>
+        <button id="logoutButton" class="logout-btn" type="button">Cerrar sesión</button>
       </div>
     </header>
 
+    <!-- Main Content -->
     <main class="main">
+      <!-- Sidebar / Left Panel -->
       <section class="sidebar">
+        <!-- Profile info -->
         <article class="card profile">
-          <h2>Perfil</h2>
+          <h2>Mi Perfil</h2>
           <div class="profile-row"><span>Nombre</span><strong id="profileName">-</strong></div>
           <div class="profile-row"><span>Email</span><strong id="profileEmail">-</strong></div>
           <div class="profile-row"><span>Licencia</span><strong id="profileLicense">-</strong></div>
-          <div class="profile-row"><span>Vehiculo</span><strong id="profileVehicle">-</strong></div>
-          <div class="profile-row"><span>Calificacion</span><strong id="profileRating">-</strong></div>
-          <div class="profile-row"><span>Estado</span><strong id="profileStatus">-</strong></div>
+          <div class="profile-row"><span>Vehículo</span><strong id="profileVehicle">-</strong></div>
+          <div class="profile-row"><span>Calificación</span><strong id="profileRating">-</strong></div>
+          <div class="profile-row"><span>Estado</span><strong id="profileStatus" class="status-value">-</strong></div>
         </article>
 
+        <!-- Actions -->
         <article class="card actions">
-          <h3>Acciones rapidas</h3>
-          <button id="sendLocationButton" class="primary-button" type="button">Enviar ubicacion actual</button>
-          <div class="hint">Comparte tu ubicacion para aparecer en conductores cercanos.</div>
+          <h3>Compartir Ubicación</h3>
+          <button id="sendLocationButton" class="primary-button" type="button">Enviar ubicación actual</button>
+          <div class="hint">Tu ubicación se compartirá automáticamente cada 15 segundos para aparecer disponible.</div>
         </article>
       </section>
 
+      <!-- Center Requests Queue -->
       <section class="requests">
         <div class="section-header">
-          <h2>Solicitudes en cola</h2>
-          <span id="rideCount" class="pill">0</span>
+          <h2>Solicitudes en Cola</h2>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btnRecargarSolicitudes" class="action-btn accept" type="button" style="padding: 4px 10px; font-size: 11px;">Recargar</button>
+            <span id="rideCount" class="pill">0</span>
+          </div>
         </div>
-        <div id="rideList" class="ride-list"></div>
+        <div id="rideList" class="ride-list">
+          <div class="status-placeholder">Esperando nuevas solicitudes de pasajeros...</div>
+        </div>
       </section>
 
+      <!-- Active Ride Control Panel -->
+      <section id="activeRideCard" class="active-ride-card hidden">
+        <div class="active-header">
+          <div class="pulse-indicator"></div>
+          <h2>Viaje Activo</h2>
+        </div>
+        <div class="active-body">
+          <div class="active-row"><span>Pasajero:</span><strong id="activePassengerName">-</strong></div>
+          <div class="active-row"><span>Ruta:</span><span id="activeRouteDetails" style="font-size: 12px; font-weight: 500;">-</span></div>
+          <button id="btnFinalizarViaje" class="finish-button" type="button">Finalizar Viaje</button>
+        </div>
+      </section>
+
+      <!-- Right Map View -->
       <section class="map-card">
         <div id="map"></div>
         <div id="mapOverlay" class="overlay">Esperando solicitudes...</div>
@@ -73,7 +98,7 @@
         }
 
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async&libraries=marker`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=initMap&loading=async&libraries=marker,places`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);

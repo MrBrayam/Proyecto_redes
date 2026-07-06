@@ -104,7 +104,7 @@
           return;
         }
 
-        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("passengerAuthToken", data.token);
         window.location.href = "/pasajero/dashboard.html";
       } catch (error) {
         setMessage("No se pudo iniciar sesion");

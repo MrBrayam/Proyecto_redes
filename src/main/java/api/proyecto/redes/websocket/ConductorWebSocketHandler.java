@@ -16,6 +16,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 public class ConductorWebSocketHandler extends TextWebSocketHandler {
@@ -66,8 +67,10 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
         Conductor conductor = conductorService.obtenerPorUsuarioId(auth.usuario().idUsuario());
         rideRealtimeService.registerConductor(conductor.getIdConductor(), session);
 
+        List<Map<String, Object>> pendientesPayload = viajeService.listarPendientesPayload();
+
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            Map.of("type", "driver-ready", "pendientes", java.util.List.of())
+            Map.of("type", "driver-ready", "pendientes", pendientesPayload)
         )));
     }
 
@@ -87,6 +90,12 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
             "conductorNombre", auth.usuario().nombre()
         ));
 
+        // Broadcast to other drivers that the ride has been taken
+        rideRealtimeService.broadcastConductores(Map.of(
+            "type", "ride-taken",
+            "viajeId", viaje.getIdViaje()
+        ));
+
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
             Map.of("type", "ride-accepted", "viajeId", viaje.getIdViaje())
         )));
@@ -98,6 +107,15 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         Long viajeId = payload.path("viajeId").asLong(0);
+        Viaje viaje = viajeService.rechazarViaje(viajeId);
+
+        // Notify passenger that the request was rejected
+        rideRealtimeService.enviarAPasajero(viaje.getPasajero().getIdUsuario(), Map.of(
+            "type", "ride-status",
+            "status", "RECHAZADO",
+            "viajeId", viaje.getIdViaje()
+        ));
+
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
             Map.of("type", "ride-rejected", "viajeId", viajeId)
         )));
@@ -114,18 +132,21 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
         if (lat == null || lng == null) {
             return;
         }
-        Viaje viaje = viajeService.obtenerPorId(viajeId);
-        if (viaje.getConductor() == null || !viaje.getConductor().getUsuario().getIdUsuario().equals(auth.usuario().idUsuario())) {
+        Long passengerUsuarioId = viajeService.validarYObtenerPasajeroIdDeViaje(viajeId, auth.usuario().idUsuario());
+        if (passengerUsuarioId == null) {
             return;
         }
-        rideRealtimeService.enviarAPasajero(viaje.getPasajero().getIdUsuario(), Map.of(
+        rideRealtimeService.enviarAPasajero(passengerUsuarioId, Map.of(
             "type", "driver-location",
             "lat", lat,
             "lng", lng,
             "viajeId", viajeId
         ));
 
-        rideRealtimeService.updateConductorLocation(viaje.getConductor().getIdConductor(), lat.doubleValue(), lng.doubleValue());
+        Conductor conductor = conductorService.obtenerPorUsuarioId(auth.usuario().idUsuario());
+        if (conductor != null) {
+            rideRealtimeService.updateConductorLocation(conductor.getIdConductor(), lat.doubleValue(), lng.doubleValue());
+        }
     }
 
     private void handleAvailableLocation(WebSocketSession session, JsonNode payload) throws Exception {
@@ -166,7 +187,7 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
         return Map.of(
             "viajeId", viaje.getIdViaje(),
             "pasajeroId", pasajeroId,
-            "pasajeroNombre", "Pasajero #" + pasajeroId,
+            "pasajeroNombre", viaje.getPasajero().getNombre(),
             "origenLat", viaje.getOrigenLat(),
             "origenLng", viaje.getOrigenLng(),
             "destinoLat", viaje.getDestinoLat(),

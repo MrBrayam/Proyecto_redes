@@ -30,7 +30,7 @@ public class Notificacion {
     @Column(name = "id_viaje")
     private Long idViaje; // Referencia al viaje relacionado (opcional)
 
-    @Column(nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private LocalDateTime creadoEn = LocalDateTime.now();
 
     @Column(name = "leido_en")

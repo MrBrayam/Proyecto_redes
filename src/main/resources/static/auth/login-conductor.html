@@ -104,7 +104,7 @@
           return;
         }
 
-        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("driverAuthToken", data.token);
         window.location.href = "/conductor/dashboard.html";
       } catch (error) {
         setMessage("No se pudo iniciar sesion");

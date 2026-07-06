@@ -220,8 +220,38 @@ public class ViajeService {
         return viajeRepository.save(viaje);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<Viaje> listarPendientes() {
         return viajeRepository.findByEstado(EstadoViaje.SOLICITADO);
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<java.util.Map<String, Object>> listarPendientesPayload() {
+        List<Viaje> pendientes = viajeRepository.findByEstado(EstadoViaje.SOLICITADO);
+        return pendientes.stream().map(v -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("viajeId", v.getIdViaje());
+            map.put("pasajeroId", v.getPasajero().getIdUsuario());
+            map.put("pasajeroNombre", v.getPasajero().getNombre());
+            map.put("origenLat", v.getOrigenLat());
+            map.put("origenLng", v.getOrigenLng());
+            map.put("destinoLat", v.getDestinoLat());
+            map.put("destinoLng", v.getDestinoLng());
+            map.put("estado", v.getEstado().name());
+            return map;
+        }).toList();
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public Long validarYObtenerPasajeroIdDeViaje(Long viajeId, Long conductorUsuarioId) {
+        Viaje viaje = viajeRepository.findById(viajeId).orElse(null);
+        if (viaje == null || viaje.getConductor() == null) {
+            return null;
+        }
+        if (!viaje.getConductor().getUsuario().getIdUsuario().equals(conductorUsuarioId)) {
+            return null;
+        }
+        return viaje.getPasajero().getIdUsuario();
     }
 
     public Viaje obtenerPorId(Long id) {

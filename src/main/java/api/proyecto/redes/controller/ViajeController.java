@@ -201,6 +201,21 @@ public class ViajeController {
         AuthResponse session = validarRol(authorization, tokenHeader, RolUsuario.CONDUCTOR);
         Conductor conductor = conductorService.obtenerPorUsuarioId(session.usuario().idUsuario());
         Viaje viaje = viajeService.aceptarViaje(id, conductor);
+
+        // Notify passenger in real time via WebSocket!
+        rideRealtimeService.enviarAPasajero(viaje.getPasajero().getIdUsuario(), Map.of(
+            "type", "ride-status",
+            "status", EstadoViaje.ACEPTADO.name(),
+            "viajeId", viaje.getIdViaje(),
+            "conductorNombre", session.usuario().nombre()
+        ));
+
+        // Broadcast to other drivers to remove it from their queues
+        rideRealtimeService.broadcastConductores(Map.of(
+            "type", "ride-taken",
+            "viajeId", viaje.getIdViaje()
+        ));
+
         return toResponse(viaje);
     }
 
@@ -208,8 +223,16 @@ public class ViajeController {
     public ViajeResponse rechazar(@PathVariable Long id,
                                   @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
                                   @RequestHeader(value = "X-Auth-Token", required = false) String tokenHeader) {
-        validarRol(authorization, tokenHeader, RolUsuario.CONDUCTOR);
+        AuthResponse session = validarRol(authorization, tokenHeader, RolUsuario.CONDUCTOR);
         Viaje viaje = viajeService.rechazarViaje(id);
+
+        // Notify passenger in real time via WebSocket!
+        rideRealtimeService.enviarAPasajero(viaje.getPasajero().getIdUsuario(), Map.of(
+            "type", "ride-status",
+            "status", "RECHAZADO",
+            "viajeId", viaje.getIdViaje()
+        ));
+
         return toResponse(viaje);
     }
 
