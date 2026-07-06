@@ -4,7 +4,34 @@ let driverMarker;
 let ws;
 let activeRideId = null;
 const rides = new Map();
+const pendingRideActions = new Set();
 const FIXED_COORDS = { lat: -6.485623, lng: -76.371148 };
+
+function showRideMessage(message, variant = "info") {
+  const existing = document.getElementById("rideToast");
+  if (existing) {
+    existing.remove();
+  }
+
+  const toast = document.createElement("div");
+  toast.id = "rideToast";
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.right = "20px";
+  toast.style.bottom = "20px";
+  toast.style.zIndex = "9999";
+  toast.style.padding = "10px 14px";
+  toast.style.borderRadius = "10px";
+  toast.style.boxShadow = "0 8px 24px rgba(23, 32, 38, 0.2)";
+  toast.style.fontSize = "13px";
+  toast.style.color = "#ffffff";
+  toast.style.background = variant === "error" ? "#b91c1c" : "#1f6f5b";
+  document.body.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.remove();
+  }, 2800);
+}
 
 function initMap() {
   const defaultPos = { lat: -6.501, lng: -76.365 };
@@ -62,8 +89,8 @@ function updateRideList() {
         <span>${ride.estado || "SOLICITADO"}</span>
       </div>
       <div class="ride-actions">
-        <button class="secondary-button accept" data-action="accept">Aceptar</button>
-        <button class="secondary-button reject" data-action="reject">Rechazar</button>
+        <button class="secondary-button accept" data-action="accept" ${pendingRideActions.has(ride.viajeId) ? "disabled" : ""}>Aceptar</button>
+        <button class="secondary-button reject" data-action="reject" ${pendingRideActions.has(ride.viajeId) ? "disabled" : ""}>Rechazar</button>
       </div>
     `;
 
@@ -80,6 +107,11 @@ function updateRideList() {
     buttons.forEach((button) => {
       button.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (pendingRideActions.has(ride.viajeId)) {
+          return;
+        }
+        pendingRideActions.add(ride.viajeId);
+        updateRideList();
         if (button.dataset.action === "accept") {
           sendRideAction("ride-accept", ride.viajeId);
         } else {
@@ -95,11 +127,19 @@ function updateRideList() {
 function sendRideAction(type, viajeId) {
   const token = localStorage.getItem("authToken");
   if (!token) {
+    pendingRideActions.delete(viajeId);
+    updateRideList();
+    showRideMessage("Tu sesion no es valida. Inicia sesion nuevamente.", "error");
     return;
   }
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type, token, viajeId }));
+    return;
   }
+
+  pendingRideActions.delete(viajeId);
+  updateRideList();
+  showRideMessage("No hay conexion con el servidor. Intenta de nuevo.", "error");
 }
 
 function connectWebSocket() {
@@ -127,12 +167,39 @@ function connectWebSocket() {
         updateRideList();
       }
       if (payload.type === "ride-accepted") {
+        pendingRideActions.delete(payload.viajeId);
         rides.delete(payload.viajeId);
+        if (activeRideId === payload.viajeId) {
+          activeRideId = null;
+        }
+        showRideMessage(`Viaje #${payload.viajeId} aceptado.`);
         updateRideList();
+      }
+      if (payload.type === "ride-rejected") {
+        pendingRideActions.delete(payload.viajeId);
+        rides.delete(payload.viajeId);
+        if (activeRideId === payload.viajeId) {
+          activeRideId = null;
+        }
+        showRideMessage(`Viaje #${payload.viajeId} rechazado.`);
+        updateRideList();
+      }
+      if (payload.type === "error") {
+        showRideMessage(payload.message || "Ocurrio un error al procesar la solicitud.", "error");
+        if (/token invalido|expirado|no autorizado|rol no autorizado/i.test(payload.message || "")) {
+          localStorage.removeItem("authToken");
+          window.location.href = "/auth/login-conductor.html";
+        }
       }
     } catch (error) {
       // ignore invalid messages
     }
+  };
+
+  ws.onclose = () => {
+    pendingRideActions.clear();
+    updateRideList();
+    showRideMessage("Conexion WebSocket cerrada. Recarga la pagina si el problema persiste.", "error");
   };
 }
 

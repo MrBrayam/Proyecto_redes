@@ -47,6 +47,10 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         JsonNode payload = objectMapper.readTree(message.getPayload());
         String type = payload.path("type").asText("");
+        if ("passenger-connect".equals(type)) {
+            handlePassengerConnect(session, payload);
+            return;
+        }
         if ("ride-request".equals(type)) {
             handleRideRequest(session, payload);
         }
@@ -58,12 +62,8 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleRideRequest(WebSocketSession session, JsonNode payload) throws Exception {
-        String token = payload.path("token").asText(null);
-        AuthResponse auth = authService.obtenerSesion(token);
-        if (auth.usuario() == null || auth.usuario().rol() != RolUsuario.PASAJERO) {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-                Map.of("type", "error", "message", "Rol no autorizado")
-            )));
+        AuthResponse auth = validarPasajero(payload.path("token").asText(null), session);
+        if (auth == null) {
             return;
         }
 
@@ -74,6 +74,8 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
             )));
             return;
         }
+
+        rideRealtimeService.registerPasajero(pasajero.getIdUsuario(), session);
 
         BigDecimal origenLat = toDecimal(payload.path("origenLat").asText(null));
         BigDecimal origenLng = toDecimal(payload.path("origenLng").asText(null));
@@ -100,7 +102,6 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
         ViajeRequest request = new ViajeRequest(origenLat, origenLng, destinoLat, destinoLng, destinoTexto, conductorId);
         Viaje viaje = viajeService.crearSolicitud(pasajero, request, conductor);
 
-        rideRealtimeService.registerPasajero(pasajero.getIdUsuario(), session);
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
             Map.of("type", "ride-status", "status", "SOLICITADO", "viajeId", viaje.getIdViaje())
         )));
@@ -121,6 +122,36 @@ public class PasajeroWebSocketHandler extends TextWebSocketHandler {
             rideRealtimeService.enviarAConductor(conductor.getIdConductor(), payloadConductor);
         } else {
             rideRealtimeService.broadcastConductores(payloadConductor);
+        }
+    }
+
+    private void handlePassengerConnect(WebSocketSession session, JsonNode payload) throws Exception {
+        AuthResponse auth = validarPasajero(payload.path("token").asText(null), session);
+        if (auth == null) {
+            return;
+        }
+
+        rideRealtimeService.registerPasajero(auth.usuario().idUsuario(), session);
+        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+            Map.of("type", "passenger-ready", "usuarioId", auth.usuario().idUsuario())
+        )));
+    }
+
+    private AuthResponse validarPasajero(String token, WebSocketSession session) throws Exception {
+        try {
+            AuthResponse auth = authService.obtenerSesion(token);
+            if (auth.usuario() == null || auth.usuario().rol() != RolUsuario.PASAJERO) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+                    Map.of("type", "error", "message", "Rol no autorizado")
+                )));
+                return null;
+            }
+            return auth;
+        } catch (Exception ex) {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+                Map.of("type", "error", "message", "Token invalido o expirado")
+            )));
+            return null;
         }
     }
 

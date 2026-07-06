@@ -8,6 +8,8 @@ let destinationLat = null;
 let destinationLng = null;
 let selectedConductor = null;
 let sessionChecked = false;
+let directionsService;
+let directionsRenderer;
 
 function initMap() {
   const defaultPos = { lat: -6.501, lng: -76.365 };
@@ -16,6 +18,16 @@ function initMap() {
     zoom: 14,
     mapTypeControl: false,
     mapId: "7f05a409dd0b6a5abd5c170e"
+  });
+
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer({
+    map,
+    suppressMarkers: true,
+    polylineOptions: {
+      strokeColor: "#d96c1b",
+      strokeWeight: 5
+    }
   });
 
   pickupMarker = new google.maps.marker.AdvancedMarkerElement({
@@ -33,10 +45,8 @@ function initMap() {
     destinationLat = pos.lat;
     destinationLng = pos.lng;
     setDestinationMarker(pos);
-    const destinoInput = document.getElementById("destino");
-    if (!destinoInput.value.trim()) {
-      destinoInput.value = "Destino en mapa";
-    }
+    updateDestinoInputFromCoords(pos.lat, pos.lng);
+    updateTripPreview();
     document.getElementById("rideStatus").textContent = "Destino seleccionado en el mapa";
   });
 
@@ -54,6 +64,89 @@ function updateCoords() {
   }
   document.getElementById("origenLat").value = pos.lat().toFixed(6);
   document.getElementById("origenLng").value = pos.lng().toFixed(6);
+  updateTripPreview();
+}
+
+function updateDestinoInputFromCoords(lat, lng) {
+  const destinoInput = document.getElementById("destino");
+  if (!google.maps.Geocoder) {
+    destinoInput.value = `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+    return;
+  }
+
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ location: { lat: Number(lat), lng: Number(lng) } }, (results, status) => {
+    if (status === "OK" && results && results.length > 0) {
+      destinoInput.value = results[0].formatted_address;
+      return;
+    }
+    destinoInput.value = `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+  });
+}
+
+function setTripPreview(distanceText, durationText, fareText) {
+  document.getElementById("routeDistance").textContent = distanceText;
+  document.getElementById("routeDuration").textContent = durationText;
+  document.getElementById("routeFare").textContent = fareText;
+}
+
+async function updateTripPreview() {
+  const origenLat = Number(document.getElementById("origenLat").value);
+  const origenLng = Number(document.getElementById("origenLng").value);
+  if (!Number.isFinite(origenLat) || !Number.isFinite(origenLng) || destinationLat == null || destinationLng == null) {
+    setTripPreview("-", "-", "-");
+    if (directionsRenderer) {
+      directionsRenderer.set("directions", null);
+    }
+    return;
+  }
+
+  if (directionsService && directionsRenderer) {
+    directionsService.route({
+      origin: { lat: origenLat, lng: origenLng },
+      destination: { lat: Number(destinationLat), lng: Number(destinationLng) },
+      travelMode: google.maps.TravelMode.DRIVING
+    }, async (result, status) => {
+      if (status !== "OK" || !result || !result.routes || result.routes.length === 0) {
+        setTripPreview("Sin ruta", "-", "-");
+        return;
+      }
+
+      directionsRenderer.setDirections(result);
+      const leg = result.routes[0].legs && result.routes[0].legs[0];
+      const distanceText = leg?.distance?.text || "-";
+      const durationText = leg?.duration?.text || "-";
+
+      const fareText = await estimateFare(origenLat, origenLng, Number(destinationLat), Number(destinationLng));
+      setTripPreview(distanceText, durationText, fareText);
+    });
+  }
+}
+
+async function estimateFare(origenLat, origenLng, destinoLat, destinoLng) {
+  try {
+    const response = await fetch("/api/viajes/calcular-tarifa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        origenLat,
+        origenLng,
+        destinoLat,
+        destinoLng,
+        destinoTexto: document.getElementById("destino").value || "Destino"
+      })
+    });
+    if (!response.ok) {
+      return "No disponible";
+    }
+    const data = await response.json();
+    if (!data || data.tarifaEstimada == null) {
+      return "No disponible";
+    }
+    return `S/ ${Number(data.tarifaEstimada).toFixed(2)}`;
+  } catch (error) {
+    return "No disponible";
+  }
 }
 
 function connectWebSocket() {
@@ -66,6 +159,10 @@ function connectWebSocket() {
 
   ws.onopen = () => {
     status.textContent = "WebSocket conectado";
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      ws.send(JSON.stringify({ type: "passenger-connect", token }));
+    }
   };
 
   ws.onmessage = (event) => {
@@ -76,6 +173,12 @@ function connectWebSocket() {
       }
       if (payload.type === "ride-status" && payload.status) {
         document.getElementById("rideStatus").textContent = payload.status;
+      }
+      if (payload.type === "error" && payload.message) {
+        document.getElementById("rideStatus").textContent = payload.message;
+        if (/token invalido|expirado|no autorizado/i.test(payload.message)) {
+          manejarSesionInvalida();
+        }
       }
     } catch (error) {
       // ignore invalid messages
@@ -207,20 +310,33 @@ function enviarSolicitud(token, origenLat, origenLng, destinoLatValue, destinoLn
       conductorId: message.conductorId
     })
   })
-    .then((response) => {
+    .then(async (response) => {
       if (!response.ok) {
-        throw new Error("No se pudo crear el viaje");
+        let errorMessage = "No se pudo crear el viaje";
+        try {
+          const payload = await response.json();
+          if (payload && (payload.message || payload.error)) {
+            errorMessage = payload.message || payload.error;
+          }
+        } catch (error) {
+          // ignore parse error
+        }
+        const err = new Error(errorMessage);
+        err.status = response.status;
+        throw err;
       }
       return response.json();
     })
     .then((data) => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(message));
-      }
       document.getElementById("rideStatus").textContent = "Solicitud enviada";
     })
-    .catch(() => {
-      document.getElementById("rideStatus").textContent = "No se pudo enviar la solicitud";
+    .catch((error) => {
+      if (error && (error.status === 401 || error.status === 403)) {
+        document.getElementById("rideStatus").textContent = "Sesion invalida o rol no autorizado";
+        manejarSesionInvalida();
+        return;
+      }
+      document.getElementById("rideStatus").textContent = error?.message || "No se pudo enviar la solicitud";
     })
     .finally(() => {
       selectedConductor = null;

@@ -5,6 +5,7 @@ import api.proyecto.redes.model.TipoNotificacion;
 import api.proyecto.redes.model.Usuario;
 import api.proyecto.redes.repository.NotificacionRepository;
 import api.proyecto.redes.repository.UsuarioRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -20,11 +21,11 @@ public class NotificacionService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public NotificacionService(NotificacionRepository notificacionRepository,
-                              UsuarioRepository usuarioRepository,
-                              SimpMessagingTemplate messagingTemplate) {
+                               UsuarioRepository usuarioRepository,
+                               ObjectProvider<SimpMessagingTemplate> messagingTemplateProvider) {
         this.notificacionRepository = notificacionRepository;
         this.usuarioRepository = usuarioRepository;
-        this.messagingTemplate = messagingTemplate;
+        this.messagingTemplate = messagingTemplateProvider.getIfAvailable();
     }
 
     /**
@@ -64,6 +65,9 @@ public class NotificacionService {
      * Envía una notificación por WebSocket a tema privado del usuario
      */
     private void enviarPorWebSocket(Long usuarioId, Notificacion notificacion) {
+        if (messagingTemplate == null) {
+            return;
+        }
         try {
             messagingTemplate.convertAndSend(
                 "/topic/notificaciones/usuario/" + usuarioId,

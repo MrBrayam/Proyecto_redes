@@ -16,7 +16,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
 public class ConductorWebSocketHandler extends TextWebSocketHandler {
@@ -67,9 +66,8 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
         Conductor conductor = conductorService.obtenerPorUsuarioId(auth.usuario().idUsuario());
         rideRealtimeService.registerConductor(conductor.getIdConductor(), session);
 
-        List<Viaje> pendientes = viajeService.listarPendientes();
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            Map.of("type", "driver-ready", "pendientes", pendientes.stream().map(this::toPayload).toList())
+            Map.of("type", "driver-ready", "pendientes", java.util.List.of())
         )));
     }
 
@@ -86,7 +84,7 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
             "type", "ride-status",
             "status", EstadoViaje.ACEPTADO.name(),
             "viajeId", viaje.getIdViaje(),
-            "conductorNombre", conductor.getUsuario().getNombre()
+            "conductorNombre", auth.usuario().nombre()
         ));
 
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
@@ -146,21 +144,29 @@ public class ConductorWebSocketHandler extends TextWebSocketHandler {
 
     private AuthResponse validarConductor(JsonNode payload, WebSocketSession session) throws Exception {
         String token = payload.path("token").asText(null);
-        AuthResponse auth = authService.obtenerSesion(token);
-        if (auth.usuario() == null || auth.usuario().rol() != RolUsuario.CONDUCTOR) {
+        try {
+            AuthResponse auth = authService.obtenerSesion(token);
+            if (auth.usuario() == null || auth.usuario().rol() != RolUsuario.CONDUCTOR) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+                    Map.of("type", "error", "message", "Rol no autorizado")
+                )));
+                return null;
+            }
+            return auth;
+        } catch (Exception ex) {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-                Map.of("type", "error", "message", "Rol no autorizado")
+                Map.of("type", "error", "message", "Token invalido o expirado")
             )));
             return null;
         }
-        return auth;
     }
 
     private Map<String, Object> toPayload(Viaje viaje) {
+        Long pasajeroId = viaje.getPasajero().getIdUsuario();
         return Map.of(
             "viajeId", viaje.getIdViaje(),
-            "pasajeroId", viaje.getPasajero().getIdUsuario(),
-            "pasajeroNombre", viaje.getPasajero().getNombre(),
+            "pasajeroId", pasajeroId,
+            "pasajeroNombre", "Pasajero #" + pasajeroId,
             "origenLat", viaje.getOrigenLat(),
             "origenLng", viaje.getOrigenLng(),
             "destinoLat", viaje.getDestinoLat(),
